@@ -41,7 +41,8 @@ std::string toString(State);
  
 // we should distinguish the keyword and a variable(function) name, so we need a keyword table here
 extern std::set<std::string> keywords;
-
+extern std::set<char> opwords1;
+extern std::set<std::string> opwords2;
 // definition of DFA
 struct DFA {
     /**
@@ -104,6 +105,10 @@ struct Scanner {
 private:
     std::ifstream fin;  // the input file
 };
+
+TokenType get_Ident_type(std::string s);
+
+TokenType get_op_type(std::string s);
 
 } // namespace frontend
 
