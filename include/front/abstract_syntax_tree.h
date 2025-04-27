@@ -98,7 +98,7 @@ struct Term: AstNode {
     /**
      * @brief constructor
      */
-    Term(Token t, AstNode* p = nullptr);
+    Term(Token t, AstNode* p = nullptr):AstNode(NodeType::TERMINAL,p),token(t){}
 };
 
 
@@ -106,14 +106,14 @@ struct CompUnit: AstNode {
     /**
      * @brief constructor
      */
-    CompUnit(AstNode* p = nullptr);
+    CompUnit(AstNode* p = nullptr):AstNode(NodeType::COMPUINT,p){};
 };
 
 struct Decl: AstNode{
     /**
      * @brief constructor
      */
-    Decl(AstNode* p = nullptr);
+    Decl(AstNode* p = nullptr):AstNode(NodeType::DECL,p){};
 };
 
 struct FuncDef: AstNode{
@@ -123,7 +123,7 @@ struct FuncDef: AstNode{
     /**
      * @brief constructor
      */
-    FuncDef(AstNode* p = nullptr);
+    FuncDef(AstNode* p = nullptr):AstNode(NodeType::FUNCDEF,p){};
 };
 
 struct ConstDecl: AstNode {
@@ -132,7 +132,7 @@ struct ConstDecl: AstNode {
     /**
      * @brief constructor
      */
-    ConstDecl(AstNode* p = nullptr);        
+    ConstDecl(AstNode* p = nullptr):AstNode(NodeType::CONSTDECL,p){};        
 };
 
 struct BType: AstNode {
@@ -141,189 +141,189 @@ struct BType: AstNode {
     /**
      * @brief constructor
      */
-    BType(AstNode* p = nullptr);
+    BType(AstNode* p = nullptr):AstNode(NodeType::BTYPE,p){};
 };
 
 struct ConstDef: AstNode{
     /**
      * @brief constructor
      */
-    ConstDef(AstNode* p = nullptr);
+    ConstDef(AstNode* p = nullptr):AstNode(NodeType::CONSTDEF,p){};
 };
 
 struct ConstInitVal: AstNode{
     /**
      * @brief constructor
      */
-    ConstInitVal(AstNode* p = nullptr);
+    ConstInitVal(AstNode* p = nullptr):AstNode(NodeType::CONSTINITVAL,p){};
 };
 
 struct VarDecl: AstNode{
     /**
      * @brief constructor
      */
-    VarDecl(AstNode* p = nullptr);
+    VarDecl(AstNode* p = nullptr):AstNode(NodeType::VARDECL,p){};
 };
 
 struct VarDef: AstNode{
     /**
      * @brief constructor
      */
-    VarDef(AstNode* p = nullptr);
+    VarDef(AstNode* p = nullptr):AstNode(NodeType::VARDEF,p){};
 };
 
 struct InitVal: AstNode{
     /**
      * @brief constructor
      */
-    InitVal(AstNode* p = nullptr);
+    InitVal(AstNode* p = nullptr):AstNode(NodeType::INITVAL,p){};
 };
 
 struct FuncType: AstNode{
     /**
      * @brief constructor
      */
-    FuncType(AstNode* p = nullptr);
+    FuncType(AstNode* p = nullptr):AstNode(NodeType::FUNCTYPE,p){};
 };
 
 struct FuncFParam: AstNode{
     /**
      * @brief constructor
      */
-    FuncFParam(AstNode* p = nullptr);
+    FuncFParam(AstNode* p = nullptr):AstNode(NodeType::FUNCFPARAM,p){};
 };
 
 struct FuncFParams: AstNode{
     /**
      * @brief constructor
      */
-    FuncFParams(AstNode* p = nullptr);
+    FuncFParams(AstNode* p = nullptr):AstNode(NodeType::FUNCFPARAMS,p){};
 };
 
 struct Block: AstNode{
     /**
      * @brief constructor
      */
-    Block(AstNode* p = nullptr);
+    Block(AstNode* p = nullptr):AstNode(NodeType::BLOCK,p){};
 };
 
 struct BlockItem: AstNode{
     /**
      * @brief constructor
      */
-    BlockItem(AstNode* p = nullptr);
+    BlockItem(AstNode* p = nullptr):AstNode(NodeType::BLOCKITEM,p){};
 };
 
 struct Stmt: AstNode{
     /**
      * @brief constructor
      */
-    Stmt(AstNode* p = nullptr);
+    Stmt(AstNode* p = nullptr):AstNode(NodeType::STMT,p){};
 };
 
 struct Exp: AstNode{
     /**
      * @brief constructor
      */
-    Exp(AstNode* p = nullptr);
+    Exp(AstNode* p = nullptr):AstNode(NodeType::EXP,p){};
 };
 
 struct Cond: AstNode{
     /**
      * @brief constructor
      */
-    Cond(AstNode* p = nullptr);
+    Cond(AstNode* p = nullptr):AstNode(NodeType::COND,p){};
 };
 
 struct LVal: AstNode{
     /**
      * @brief constructor
      */
-    LVal(AstNode* p = nullptr);
+    LVal(AstNode* p = nullptr):AstNode(NodeType::LVAL,p){};
 };
 
 struct Number: AstNode{
     /**
      * @brief constructor
      */
-    Number(AstNode* p = nullptr);
+    Number(AstNode* p = nullptr):AstNode(NodeType::NUMBER,p){};
 };
 
 struct PrimaryExp: AstNode{
     /**
      * @brief constructor
      */
-    PrimaryExp(AstNode* p = nullptr);
+    PrimaryExp(AstNode* p = nullptr):AstNode(NodeType::PRIMARYEXP,p){};
 };
 
 struct UnaryExp: AstNode{
     /**
      * @brief constructor
      */
-    UnaryExp(AstNode* p = nullptr);
+    UnaryExp(AstNode* p = nullptr):AstNode(NodeType::UNARYEXP,p){};
 };
 
 struct UnaryOp: AstNode{
     /**
      * @brief constructor
      */
-    UnaryOp(AstNode* p = nullptr);
+    UnaryOp(AstNode* p = nullptr):AstNode(NodeType::UNARYOP,p){};
 };
 
 struct FuncRParams: AstNode{
     /**
      * @brief constructor
      */
-    FuncRParams(AstNode* p = nullptr);
+    FuncRParams(AstNode* p = nullptr):AstNode(NodeType::FUNCRPARAMS,p){};
 };
 
 struct MulExp: AstNode{
     /**
      * @brief constructor
      */
-    MulExp(AstNode* p = nullptr);
+    MulExp(AstNode* p = nullptr):AstNode(NodeType::MULEXP,p){};
 };
 
 struct AddExp: AstNode{
     /**
      * @brief constructor
      */
-    AddExp(AstNode* p = nullptr);
+    AddExp(AstNode* p = nullptr):AstNode(NodeType::ADDEXP,p){};
 };
 
 struct RelExp: AstNode{
     /**
      * @brief constructor
      */
-    RelExp(AstNode* p = nullptr);
+    RelExp(AstNode* p = nullptr):AstNode(NodeType::RELEXP,p){};
 };
 
 struct EqExp: AstNode{
     /**
      * @brief constructor
      */
-    EqExp(AstNode* p = nullptr);
+    EqExp(AstNode* p = nullptr):AstNode(NodeType::EQEXP,p){};
 };
 
 struct LAndExp: AstNode{
     /**
      * @brief constructor
      */
-    LAndExp(AstNode* p = nullptr);
+    LAndExp(AstNode* p = nullptr):AstNode(NodeType::LANDEXP,p){};
 };
 
 struct LOrExp: AstNode{
     /**
      * @brief constructor
      */
-    LOrExp(AstNode* p = nullptr);
+    LOrExp(AstNode* p = nullptr):AstNode(NodeType::LOREXP,p){};
 };
 
 struct ConstExp: AstNode{
     /**
      * @brief constructor
      */
-    ConstExp(AstNode* p = nullptr);
+    ConstExp(AstNode* p = nullptr):AstNode(NodeType::CONSTEXP,p){};
 };
 
 } // namespace frontend

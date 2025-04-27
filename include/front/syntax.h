@@ -49,6 +49,39 @@ struct Parser {
      * @param node: current parsing node 
      */
     void log(AstNode* node);
+    
+    void parseTerm(AstNode* root);
+    bool parseCompUnit(AstNode* root);
+    bool parseDecl(AstNode* root);
+    bool parseFuncDef(AstNode* root);
+    bool parseConstDecl(AstNode* root);
+    bool parseBType(AstNode* root);
+    bool parseConstDef(AstNode* root);
+    bool parseConstInitVal(AstNode* root);
+    bool parseVarDecl(AstNode* root);
+    bool parseVarDef(AstNode* root);
+    bool parseInitVal(AstNode* root);
+    bool parseFuncType(AstNode* root);
+    bool parseFuncFParam(AstNode* root);
+    bool parseFuncFParams(AstNode* root);
+    bool parseBlock(AstNode* root);
+    bool parseBlockItem(AstNode* root);
+    bool parseStmt(AstNode* root);
+    bool parseExp(AstNode* root);
+    bool parseCond(AstNode* root);
+    bool parseLVal(AstNode* root);
+    bool parseNumber(AstNode* root);
+    bool parsePrimaryExp(AstNode* root);
+    bool parseUnaryExp(AstNode* root);
+    bool parseUnaryOp(AstNode* root);
+    bool parseFuncRParams(AstNode* root);
+    bool parseMulExp(AstNode* root);
+    bool parseAddExp(AstNode* root);
+    bool parseRelExp(AstNode* root);
+    bool parseEqExp(AstNode* root);
+    bool parseLAndExp(AstNode* root);
+    bool parseLOrExp(AstNode* root);
+    bool parseConstExp(AstNode* root);
 };
 
 } // namespace frontend
