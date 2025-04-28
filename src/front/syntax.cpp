@@ -127,11 +127,11 @@ bool Parser::parseFuncFParam(AstNode *root)
         return false;
     root->children.push_back(type);
     parseTerm(root);
-    if (CUR_TOKEN_IS(LPARENT))
+    if (CUR_TOKEN_IS(LBRACK))
     {
         parseTerm(root); //  (
         parseTerm(root); //  )
-        while (CUR_TOKEN_IS(LPARENT))
+        while (CUR_TOKEN_IS(LBRACK))
         {
             parseTerm(root);
             frontend::Exp *exp = new frontend::Exp;
@@ -465,11 +465,9 @@ bool Parser::parseMulExp(AstNode *root) // SOLVE
 bool Parser::parseUnaryExp(AstNode *root) // SOLVE
 {
     uint32_t idx = index, temp = index + 1;
-    if (token_stream[temp].type == TokenType::LPARENT) // 如果进入一定为函数调用
+    if (CUR_TOKEN_IS(IDENFR)&&token_stream[temp].type == TokenType::LPARENT) // 如果进入一定为函数调用
     {
         parseTerm(root);
-        if (!CUR_TOKEN_IS(LPARENT))
-            assert(0 && "invalid Ident '(' [FuncRParams]");
         parseTerm(root);
         if (!CUR_TOKEN_IS(RPARENT))
         {
