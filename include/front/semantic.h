@@ -27,7 +27,7 @@ namespace frontend
 {
 
 // definition of symbol table entry
-struct STE {
+struct STE {//符号表中的一条记录
     ir::Operand operand;
     vector<int> dimension;
 };
@@ -52,7 +52,7 @@ struct SymbolTable{
      * @brief enter a new scope, record the infomation in scope stacks
      * @param node: a Block node, entering a new Block means a new name scope
      */
-    void add_scope(Block*);
+    void add_scope();
 
     /**
      * @brief exit a scope, pop out infomations
@@ -103,6 +103,37 @@ struct Analyzer {
 
     // analysis functions
     ir::Program get_ir_program(CompUnit*);
+
+    void analysisCompUnit(CompUnit*, ir::Program&);
+    void analysisDecl(Decl*, vector<ir::Instruction*>&);
+    void analysisConstDecl(ConstDecl*, vector<ir::Instruction*>&);
+    void analysisVarDecl(VarDecl*, vector<ir::Instruction*>&);
+    void analysisConstDef(ConstDef*, ir::Type, vector<ir::Instruction*>&);
+    void analysisVarDef(VarDef*, ir::Type, vector<ir::Instruction*>&);
+    void analysisFuncDef(FuncDef*, ir::Function*&);
+    void analysisFuncFParams(FuncFParams*, ir::Function*);
+    void analysisFuncFParam(FuncFParam*, ir::Function*);
+    void analysisBlock(Block*, vector<ir::Instruction*>&, bool);
+    void analysisBlockItem(BlockItem*, vector<ir::Instruction*>&);
+    void analysisStmt(Stmt*, vector<ir::Instruction*>&);
+    void analysisCond(Cond*, vector<ir::Instruction*>&);
+    Type analysisBType(BType*);
+    Type analysisFuncType(FuncType*);
+    void analysisConstInitVal(ConstInitVal*, ir::Type, vector<ir::Instruction*>&);
+    void analysisInitVal(InitVal*, ir::Type, vector<ir::Instruction*>&);
+    void analysisConstExp(ConstExp*, vector<ir::Instruction*>&);
+    void analysisAddExp(AddExp*, vector<ir::Instruction*>&);
+    void analysisMulExp(MulExp*, vector<ir::Instruction*>&);
+    void analysisUnaryExp(UnaryExp*, vector<ir::Instruction*>&);
+    void analysisFuncRParams(FuncRParams*, vector<ir::Instruction*>&, ir::Function*);
+    void analysisPrimaryExp(PrimaryExp*, vector<ir::Instruction*>&);
+    void analysisExp(Exp*, vector<ir::Instruction*>&);
+    void analysisLVal(LVal*, vector<ir::Instruction*>&);
+    void analysisNumber(Number*);
+    void analysisLOrExp(LOrExp*, vector<ir::Instruction*>&);
+    void analysisLAndExp(LAndExp*, vector<ir::Instruction*>&);
+    void analysisEqExp(EqExp*, vector<ir::Instruction*>&);
+    void analysisRelExp(RelExp*, vector<ir::Instruction*>&);
 
     // reject copy & assignment
     Analyzer(const Analyzer&) = delete;

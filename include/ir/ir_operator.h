@@ -48,7 +48,7 @@ enum class Operator {
     _not,
     _and,
     _or,
-    __unuse__
+    __unuse__ //添加的，
 };
 
 std::string toString(Operator t);

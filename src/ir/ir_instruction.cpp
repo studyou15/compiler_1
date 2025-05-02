@@ -49,58 +49,58 @@ std::string ir::Instruction::draw() const {
             return "fdef " + this->des.name + ", " + this->op1.name;
         case ir::Operator::_not:
             return "not " + this->des.name + ", " + this->op1.name;
-        default:
-            return toString(this->op) + " " + this->des.name + ", " + this->op1.name + ", " + this->op2.name;
-        // case ir::Operator::add:
-        //     return this->des.name + " = " + this->op1.name + " add " + this->op2.name;
-        // case ir::Operator::addi:
-        //     return this->des.name + " = " + this->op1.name + " addi " + this->op2.name;
-        // case ir::Operator::fadd:
-        //     return this->des.name + " = " + this->op1.name + " fadd " + this->op2.name;
-        // case ir::Operator::sub:
-        //     return this->des.name + " = " + this->op1.name + " sub " + this->op2.name;
-        // case ir::Operator::subi:
-        //     return this->des.name + " = " + this->op1.name + " subi " + this->op2.name;
-        // case ir::Operator::fsub:
-        //     return this->des.name + " = " + this->op1.name + " fsub " + this->op2.name;
-        // case ir::Operator::mul:
-        //     return this->des.name + " = " + this->op1.name + " mul " + this->op2.name;
-        // case ir::Operator::fmul:
-        //     return this->des.name + " = " + this->op1.name + " fmul " + this->op2.name;
-        // case ir::Operator::div:
-        //     return this->des.name + " = " + this->op1.name + " div " + this->op2.name;
-        // case ir::Operator::fdiv:
-        //     return this->des.name + " = " + this->op1.name + " fdiv " + this->op2.name;
-        // case ir::Operator::mod:
-        //     return this->des.name + " = " + this->op1.name + " mod " + this->op2.name;
-        // case ir::Operator::lss:
-        //     return this->des.name + " = " + this->op1.name + " lss " + this->op2.name;
+        case ir::Operator::add:
+            return this->des.name + " = " + this->op1.name + " add " + this->op2.name;
+        case ir::Operator::addi:
+            return this->des.name + " = " + this->op1.name + " addi " + this->op2.name;
+        case ir::Operator::fadd:
+            return this->des.name + " = " + this->op1.name + " fadd " + this->op2.name;
+        case ir::Operator::sub:
+            return this->des.name + " = " + this->op1.name + " sub " + this->op2.name;
+        case ir::Operator::subi:
+            return this->des.name + " = " + this->op1.name + " subi " + this->op2.name;
+        case ir::Operator::fsub:
+            return this->des.name + " = " + this->op1.name + " fsub " + this->op2.name;
+        case ir::Operator::mul:
+            return this->des.name + " = " + this->op1.name + " mul " + this->op2.name;
+        case ir::Operator::fmul:
+            return this->des.name + " = " + this->op1.name + " fmul " + this->op2.name;
+        case ir::Operator::div:
+            return this->des.name + " = " + this->op1.name + " div " + this->op2.name;
+        case ir::Operator::fdiv:
+            return this->des.name + " = " + this->op1.name + " fdiv " + this->op2.name;
+        case ir::Operator::mod:
+            return this->des.name + " = " + this->op1.name + " mod " + this->op2.name;
+        case ir::Operator::lss:
+            return this->des.name + " = " + this->op1.name + " lss " + this->op2.name;
         // case ir::Operator::lssi:
         //     return this->des.name + " = " + this->op1.name + " lssi " + this->op2.name;
-        // case ir::Operator::leq:
-        //     return this->des.name + " = " + this->op1.name + " leq " + this->op2.name;
+        case ir::Operator::leq:
+            return this->des.name + " = " + this->op1.name + " leq " + this->op2.name;
         // case ir::Operator::leqi:
         //     return this->des.name + " = " + this->op1.name + " leqi " + this->op2.name;
-        // case ir::Operator::geq:
-        //     return this->des.name + " = " + this->op1.name + " geq " + this->op2.name;
+        case ir::Operator::geq:
+            return this->des.name + " = " + this->op1.name + " geq " + this->op2.name;
         // case ir::Operator::geqi:
         //     return this->des.name + " = " + this->op1.name + " geqi " + this->op2.name;
-        // case ir::Operator::gtr:
-        //     return this->des.name + " = " + this->op1.name + " gtr " + this->op2.name;
+        case ir::Operator::gtr:
+            return this->des.name + " = " + this->op1.name + " gtr " + this->op2.name;
         // case ir::Operator::gtri:
         //     return this->des.name + " = " + this->op1.name + " gtri " + this->op2.name;
-        // case ir::Operator::eq:
-        //     return this->des.name + " = " + this->op1.name + " eq " + this->op2.name;
+        case ir::Operator::eq:
+            return this->des.name + " = " + this->op1.name + " eq " + this->op2.name;
         // case ir::Operator::eqi:
         //     return this->des.name + " = " + this->op1.name + " eqi " + this->op2.name;
-        // case ir::Operator::neq:
-        //     return this->des.name + " = " + this->op1.name + " neq " + this->op2.name;
+        case ir::Operator::neq:
+            return this->des.name + " = " + this->op1.name + " neq " + this->op2.name;
         // case ir::Operator::neqi:
         //     return this->des.name + " = " + this->op1.name + " neqi " + this->op2.name;
-        // case ir::Operator::_and:
-        //     return this->des.name + " = " + this->op1.name + " && " + this->op2.name;
-        // case ir::Operator::_or:
-        //     return this->des.name + " = " + this->op1.name + " || " + this->op2.name;
+        case ir::Operator::_and:
+            return this->des.name + " = " + this->op1.name + " && " + this->op2.name;
+        case ir::Operator::_or:
+            return this->des.name + " = " + this->op1.name + " || " + this->op2.name;
+        default:
+        return toString(this->op) + " " + this->des.name + ", " + this->op1.name + ", " + this->op2.name;
     }
     return "invalid instruction";
 }
