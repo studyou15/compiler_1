@@ -111,8 +111,8 @@ struct Analyzer {
     void analysisConstDef(ConstDef*, ir::Type, vector<ir::Instruction*>&);
     void analysisVarDef(VarDef*, ir::Type, vector<ir::Instruction*>&);
     void analysisFuncDef(FuncDef*, ir::Function*&);
-    void analysisFuncFParams(FuncFParams*, ir::Function*);
-    void analysisFuncFParam(FuncFParam*, ir::Function*);
+    void analysisFuncFParams(FuncFParams*, ir::Function*&,std::vector<ir::Operand>&);
+    void analysisFuncFParam(FuncFParam*, ir::Function*&,std::vector<ir::Operand>&);
     void analysisBlock(Block*, vector<ir::Instruction*>&, bool);
     void analysisBlockItem(BlockItem*, vector<ir::Instruction*>&);
     void analysisStmt(Stmt*, vector<ir::Instruction*>&);
@@ -125,7 +125,8 @@ struct Analyzer {
     void analysisAddExp(AddExp*, vector<ir::Instruction*>&);
     void analysisMulExp(MulExp*, vector<ir::Instruction*>&);
     void analysisUnaryExp(UnaryExp*, vector<ir::Instruction*>&);
-    void analysisFuncRParams(FuncRParams*, vector<ir::Instruction*>&, ir::Function*);
+    void analysisUnaryOp(UnaryOp*);
+    void analysisFuncRParams(FuncRParams*, vector<ir::Instruction*>&, ir::Function*,vector<ir::Operand>&);
     void analysisPrimaryExp(PrimaryExp*, vector<ir::Instruction*>&);
     void analysisExp(Exp*, vector<ir::Instruction*>&);
     void analysisLVal(LVal*, vector<ir::Instruction*>&);

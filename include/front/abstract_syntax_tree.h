@@ -153,9 +153,9 @@
  };
  
  struct ConstInitVal: AstNode{
-     bool is_computable = false;
-     string v;
-     Type t;
+    bool is_computable;
+    Type t;
+    vector<ir::Operand> vecV;
  
      /**
       * @brief constructor
@@ -180,9 +180,9 @@
  };
  
  struct InitVal: AstNode{
-     bool is_computable = false;
-     string v;
-     Type t;
+    bool is_computable;
+    Type t;
+    vector<ir::Operand> vecV;
      /**
       * @brief constructor
       */
