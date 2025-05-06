@@ -46,11 +46,12 @@ vector<int> while_s;
 vector<int> while_e;
 
 string const_n = "";
+bool SZ = 0;
 
 void frontend::SymbolTable::add_scope()
 {
     int cnt = scope_stack.size();
-    scope_stack.push_back({cnt, namespa+"_S" + STR(cnt)});
+    scope_stack.push_back({cnt, namespa + "_S" + STR(cnt)});
 }
 void frontend::SymbolTable::exit_scope()
 {
@@ -193,6 +194,7 @@ Type frontend::Analyzer::analysisFuncType(FuncType *root) // solve
 
 void frontend::Analyzer::analysisBlock(Block *root, vector<ir::Instruction *> &buffer, bool p)
 {
+    tmp_cnt = 0;
     if (p) // 不是从函数进入时，而是从while，if等进入block
     {
         symbol_table.add_scope();
@@ -295,7 +297,7 @@ void frontend::Analyzer::analysisStmt(Stmt *root, vector<ir::Instruction *> &buf
             analysisStmt(p0, buffer);
             int e = buffer.size();
             buffer.push_back(branch1);
-            branch->des.name = std::to_string(buffer.size() - s );
+            branch->des.name = std::to_string(buffer.size() - s);
             if (SIZE == 7)
             {
                 GET_CHILD_PTR(p1, Stmt, 6);
@@ -360,13 +362,27 @@ void frontend::Analyzer::analysisStmt(Stmt *root, vector<ir::Instruction *> &buf
     {
         GET_CHILD_PTR(lval, LVal, 0);
         GET_CHILD_PTR(exp, Exp, 2);
-        switch (root->children[0]->type)
+
+        analysisLVal(lval, buffer, true);
+        analysisExp(exp, buffer);
+        Operand tx("t" + std::to_string(tmp_cnt++), lval->t);
+        if (lval->children.size() > 1) // 处理数组赋值
         {
-        case NodeType::LVAL:
+            if (lval->t == Type::IntPtr && (exp->t == Type::Float || exp->t == Type::FloatLiteral))
+            {
+                buffer.push_back(new Instruction({exp->v, exp->t}, {}, tx, Operator::cvt_f2i));
+                buffer.push_back(new Instruction({lval->v, lval->t}, {lval->i, Type::Int}, tx, Operator::store));
+            }
+            else if (lval->t == Type::FloatPtr && (exp->t == Type::Int || exp->t == Type::IntLiteral))
+            {
+                buffer.push_back(new Instruction({exp->v, exp->t}, {}, tx, Operator::cvt_i2f));
+                buffer.push_back(new Instruction({lval->v, lval->t}, {lval->i, Type::Int}, tx, Operator::store));
+            }
+            else
+                buffer.push_back(new Instruction({lval->v, lval->t}, {lval->i, Type::Int}, {exp->v, exp->t}, Operator::store));
+        }
+        else
         {
-            analysisLVal(lval, buffer);
-            analysisExp(exp, buffer);
-            Operand tx("t" + std::to_string(tmp_cnt++), lval->t);
             if (lval->t == Type::Int && (exp->t == Type::Float || exp->t == Type::FloatLiteral))
             {
                 buffer.push_back(new Instruction({exp->v, exp->t}, {}, tx, Operator::cvt_f2i));
@@ -379,12 +395,9 @@ void frontend::Analyzer::analysisStmt(Stmt *root, vector<ir::Instruction *> &buf
             }
             else
                 buffer.push_back(new Instruction({exp->v, exp->t}, {}, {lval->v, lval->t}, Operator::mov));
-            tmp_cnt--;
-            break;
         }
-        default:
-            break;
-        }
+
+        tmp_cnt--;
     }
 }
 
@@ -393,6 +406,7 @@ void frontend::Analyzer::analysisCond(Cond *root, vector<ir::Instruction *> &buf
     GET_CHILD_PTR(p0, LOrExp, 0);
     analysisLOrExp(p0, buffer);
     root->v = p0->v;
+    root->t = p0->t;
 }
 
 void frontend::Analyzer::analysisLOrExp(LOrExp *root, vector<ir::Instruction *> &buffer)
@@ -400,25 +414,39 @@ void frontend::Analyzer::analysisLOrExp(LOrExp *root, vector<ir::Instruction *> 
     GET_CHILD_PTR(p0, LAndExp, 0);
     analysisLAndExp(p0, buffer);
     root->v = p0->v;
+    root->t = p0->t;
     if (SIZE == 1)
         return;
     if (root->v[0] != 't')
     {
-        string name = "t" + std::to_string(tmp_cnt);
+        string name = "t" + std::to_string(tmp_cnt++);
         buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
         root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
+        root->t = Type::Int;
     }
-    tmp_cnt++;
-    for (int i = 2; i < SIZE; i += 2)
+
+    Instruction *branch = new Instruction({root->v, root->t}, {}, {"0", ir::Type::IntLiteral}, Operator::_goto);
+    buffer.push_back(branch);
+    int rback = buffer.size();
+    GET_CHILD_PTR(p1, LOrExp, 2);
+    analysisLOrExp(p1, buffer);
+
+    if (p1->v[0] >= '0' && p1->v[0] <= '9')
     {
-        GET_CHILD_PTR(p1, LOrExp, i);
-        analysisLOrExp(p1, buffer);
-        if (p1->v[0] >= '0' && p1->v[0] <= '9')
-        {
-            p1->t = Type::IntLiteral;
-        }
-        buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::_or));
+        p1->t = Type::IntLiteral;
     }
+    buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::_or));
+    branch->des.name = std::to_string(buffer.size() - rback + 1);
+    // for (int i = 2; i < SIZE; i += 2)
+    // {
+    //     GET_CHILD_PTR(p1, LOrExp, i);
+    //     analysisLOrExp(p1, buffer);
+    //     if (p1->v[0] >= '0' && p1->v[0] <= '9')
+    //     {
+    //         p1->t = Type::IntLiteral;
+    //     }
+    //     buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::_or));
+    // }
     tmp_cnt--;
 }
 
@@ -427,25 +455,39 @@ void frontend::Analyzer::analysisLAndExp(LAndExp *root, vector<ir::Instruction *
     GET_CHILD_PTR(p0, EqExp, 0);
     analysisEqExp(p0, buffer);
     root->v = p0->v;
+    root->t = p0->t;
     if (SIZE == 1)
         return;
     if (root->v[0] != 't')
     {
-        string name = "t" + std::to_string(tmp_cnt);
+        string name = "t" + std::to_string(tmp_cnt++);
         buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
         root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
+        root->t = Type::Int;
     }
-    tmp_cnt++;
-    for (int i = 2; i < SIZE; i += 2)
+    buffer.push_back(new Instruction({root->v, root->t}, {}, {"2", ir::Type::IntLiteral}, Operator::_goto));
+    Instruction *branch = new Instruction({}, {}, {"0", ir::Type::IntLiteral}, Operator::_goto);
+    buffer.push_back(branch);
+    int rback = buffer.size();
+    GET_CHILD_PTR(p1, LAndExp, 2);
+    analysisLAndExp(p1, buffer);
+
+    if (p1->v[0] >= '0' && p1->v[0] <= '9')
     {
-        GET_CHILD_PTR(p1, LAndExp, i);
-        analysisLAndExp(p1, buffer);
-        if (p1->v[0] >= '0' && p1->v[0] <= '9')
-        {
-            p1->t = Type::IntLiteral;
-        }
-        buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::_and));
+        p1->t = Type::IntLiteral;
     }
+    buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::_and));
+    branch->des.name = std::to_string(buffer.size() - rback + 1);
+    // for (int i = 2; i < SIZE; i += 2)
+    // {
+    //     GET_CHILD_PTR(p1, LAndExp, i);
+    //     analysisLAndExp(p1, buffer);
+    //     if (p1->v[0] >= '0' && p1->v[0] <= '9')
+    //     {
+    //         p1->t = Type::IntLiteral;
+    //     }
+    //     buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::_and));
+    // }
     tmp_cnt--;
 }
 
@@ -454,6 +496,7 @@ void frontend::Analyzer::analysisEqExp(EqExp *root, vector<ir::Instruction *> &b
     GET_CHILD_PTR(p0, RelExp, 0);
     analysisRelExp(p0, buffer);
     root->v = p0->v;
+    root->t = p0->t;
     if (SIZE == 1)
         return;
     if (root->v[0] != 't')
@@ -461,6 +504,7 @@ void frontend::Analyzer::analysisEqExp(EqExp *root, vector<ir::Instruction *> &b
         string name = "t" + std::to_string(tmp_cnt);
         buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
         root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
+        root->t = Type::Int;
     }
     tmp_cnt++;
     for (int i = 2; i < SIZE; i += 2)
@@ -485,6 +529,7 @@ void frontend::Analyzer::analysisRelExp(RelExp *root, vector<ir::Instruction *> 
     GET_CHILD_PTR(p0, AddExp, 0);
     analysisAddExp(p0, buffer);
     root->v = p0->v;
+    root->t = p0->t;
     if (SIZE == 1)
         return;
     if (root->v[0] != 't')
@@ -492,6 +537,7 @@ void frontend::Analyzer::analysisRelExp(RelExp *root, vector<ir::Instruction *> 
         string name = "t" + std::to_string(tmp_cnt);
         buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
         root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
+        root->t = Type::Int;
     }
     tmp_cnt++;
     for (int i = 2; i < SIZE; i += 2)
@@ -530,6 +576,21 @@ void frontend::Analyzer::analysisAddExp(AddExp *root, vector<ir::Instruction *> 
     COPY_EXP_NODE(p0, root);
     if (SIZE == 1)
         return;
+    if (SZ) // 声明数组情况下
+    {
+        for (int i = 2; i < SIZE; i += 2)
+        {
+            root->t = Type::IntLiteral;
+            GET_CHILD_PTR(p1, MulExp, i);
+            GET_CHILD_PTR(fh, Term, i - 1);
+            analysisMulExp(p1, buffer);
+            if (fh->token.type == TokenType::PLUS)
+                root->v = std::to_string(stoi(p0->v) + stoi(p1->v));
+            else
+                root->v = std::to_string(stoi(p0->v) + stoi(p1->v));
+        }
+        return;
+    }
     std::string tmp_name = "t" + std::to_string(tmp_cnt++);
 
     if (root->t == Type::IntLiteral || root->t == Type::Int) // 多加了一条指令，将从上层传来的名字覆盖掉
@@ -601,6 +662,23 @@ void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> 
     COPY_EXP_NODE(p0, root);
     if (SIZE == 1)
         return;
+    if (SZ) // 声明数组情况下
+    {
+        for (int i = 2; i < SIZE; i += 2)
+        {
+            root->t = Type::IntLiteral;
+            GET_CHILD_PTR(p1, UnaryExp, i);
+            GET_CHILD_PTR(fh, Term, i - 1);
+            analysisUnaryExp(p1, buffer);
+            if (fh->token.type == TokenType::MULT)
+                root->v = std::to_string(stoi(p0->v) * stoi(p1->v));
+            else if (fh->token.type == TokenType::DIV)
+                root->v = std::to_string(stoi(p0->v) / stoi(p1->v));
+            else
+                root->v = std::to_string(stoi(p0->v) % stoi(p1->v));
+        }
+        return;
+    }
     std::string tmp_name = "t" + std::to_string(tmp_cnt++);
 
     if (root->t == Type::IntLiteral || root->t == Type::Int) // 多加了一条指令，将从上层传来的名字覆盖掉
@@ -714,6 +792,16 @@ void frontend::Analyzer::analysisUnaryExp(UnaryExp *root, vector<ir::Instruction
         }
         root->v = "h" + std::to_string(tmp_cnt++);
         root->t = func->returnType;
+
+        if (root->t != ir::Type::null)
+        {
+            buffer.push_back(new ir::Instruction(                                                           // int a = 2;
+                ir::Operand("0", (root->t == Type::Float) ? ir::Type::FloatLiteral : ir::Type::IntLiteral), //
+                ir::Operand(),                                                                              //
+                {root->v, root->t},                                                                         //
+                (root->t == Type::Float) ? ir::Operator::fdef : ir::Operator::def));
+        }
+
         if (SIZE == 3) // 无参
         {
             buffer.push_back(new ir::CallInst({ident->token.value, func->returnType}, {root->v, root->t}));
@@ -766,14 +854,14 @@ void frontend::Analyzer::analysisPrimaryExp(PrimaryExp *root, vector<ir::Instruc
     }
     else if (LVal *node = dynamic_cast<LVal *>(root->children[0]))
     {
-        analysisLVal(node, buffer);
+        analysisLVal(node, buffer, false);
         COPY_EXP_NODE(node, root);
     }
     else
         assert(0 && "Unknown PrimaryExp type");
 }
 
-void frontend::Analyzer::analysisLVal(LVal *root, vector<ir::Instruction *> &buffer)
+void frontend::Analyzer::analysisLVal(LVal *root, vector<ir::Instruction *> &buffer, bool p) // 一个是从数组取数，一个是将从数组存数
 {
     GET_CHILD_PTR(ident, Term, 0);
     auto ste = symbol_table.get_ste(ident->token.value);
@@ -786,9 +874,8 @@ void frontend::Analyzer::analysisLVal(LVal *root, vector<ir::Instruction *> &buf
 
     // 处理数组访问（优化临时变量使用）
     Operand base = ste.operand;
-    std::string offset_tmp = "t" + std::to_string(tmp_cnt); // 使用固定临时变量
+    std::string offset_tmp = "t" + std::to_string(tmp_cnt++); // 使用固定临时变量
     buffer.push_back(new Instruction({"0", Type::IntLiteral}, {}, {offset_tmp, Type::Int}, Operator::def));
-    tmp_cnt++; // 占用t0
 
     // 遍历数组维度索引
     for (int i = 2; i < SIZE; i += 3)
@@ -822,6 +909,13 @@ void frontend::Analyzer::analysisLVal(LVal *root, vector<ir::Instruction *> &buf
         tmp_cnt--; // 释放dim_tmp（t1）
     }
 
+    // tmp_cnt -= 1; // 释放offset_tmp（t0）
+
+    if (p) // 取数组坐标
+    {
+        root->i = offset_tmp;
+        return;
+    }
     // 生成最终地址（使用数组相关名称）
     std::string addr_name = ste.operand.name + "_elem";
     buffer.push_back(new Instruction(
@@ -831,7 +925,6 @@ void frontend::Analyzer::analysisLVal(LVal *root, vector<ir::Instruction *> &buf
         Operator::load));
 
     // 释放所有临时变量并设置最终结果
-    tmp_cnt -= 1; // 释放offset_tmp（t0）
     root->v = addr_name;
     root->t = (base.type == Type::IntPtr) ? Type::Int : Type::Float;
 }
@@ -906,7 +999,7 @@ void frontend::Analyzer::analysisConstDef(ConstDef *root, Type type, vector<ir::
         GET_CHILD_PTR(val, ConstInitVal, 2);
         analysisConstInitVal(val, type, buffer);
         ste.operand.name = const_n;
-        ste.operand.type = (type == Type::Int)?Type::IntLiteral:Type::FloatLiteral;
+        ste.operand.type = (type == Type::Int) ? Type::IntLiteral : Type::FloatLiteral;
         symbol_table.scope_stack.back().table[ident] = ste;
 
         if (type == Type::Float)
@@ -937,7 +1030,9 @@ void frontend::Analyzer::analysisConstDef(ConstDef *root, Type type, vector<ir::
         // 处理维度表达式
         i++; // 跳过LBRACK
         GET_CHILD_PTR(pk, ConstExp, i);
+        SZ = true;
         analysisConstExp(pk, buffer);
+        SZ = false;
         Len *= stoi(pk->v);
         ste.dimension.push_back(stoi(pk->v));
 
@@ -1093,12 +1188,14 @@ void frontend::Analyzer::analysisVarDef(VarDef *root, ir::Type type, vector<ir::
         // 处理维度表达式
         i++; // 跳过LBRACK
         GET_CHILD_PTR(pk, ConstExp, i);
+        SZ = 1;
         analysisConstExp(pk, buffer);
+        SZ = 0;
         Len *= stoi(pk->v);
         ste.dimension.push_back(stoi(pk->v));
 
-        i += 2;                                       // 跳过ConstExp和RBRACK
-        p1 = dynamic_cast<Term *>(root->children[i]); // 更新p1指针
+        i += 2; // 跳过ConstExp和RBRACK
+        // p1 = dynamic_cast<Term *>(root->children[i]); // 更新p1指针
     }
 
     i++;
@@ -1112,16 +1209,35 @@ void frontend::Analyzer::analysisVarDef(VarDef *root, ir::Type type, vector<ir::
             {},
             ste.operand,
             Operator::alloc));
+        int j = 0;
         if (SIZE - 1 != i)
+        {
+            for (; j < Len; j++)
+            {
+                buffer.push_back(new ir::Instruction(
+                    ste.operand,
+                    {std::to_string(j), Type::IntLiteral},
+                    {"0",Type::IntLiteral},
+                    Operator::store));
+            }
             return;
+        }
         GET_CHILD_PTR(p2, InitVal, i);
         analysisInitVal(p2, type, buffer);
-        for (int j = 0; j < (int)p2->vecV.size(); j++)
+        for (; j < (int)p2->vecV.size(); j++)
         {
             buffer.push_back(new ir::Instruction(
                 ste.operand,
                 {std::to_string(j), Type::IntLiteral},
                 p2->vecV[j],
+                Operator::store));
+        }
+        for (; j < Len; j++)
+        {
+            buffer.push_back(new ir::Instruction(
+                ste.operand,
+                {std::to_string(j), Type::IntLiteral},
+                {"0",Type::IntLiteral},
                 Operator::store));
         }
     }

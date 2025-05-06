@@ -129,7 +129,7 @@ struct Analyzer {
     void analysisFuncRParams(FuncRParams*, vector<ir::Instruction*>&, ir::Function*,vector<ir::Operand>&);
     void analysisPrimaryExp(PrimaryExp*, vector<ir::Instruction*>&);
     void analysisExp(Exp*, vector<ir::Instruction*>&);
-    void analysisLVal(LVal*, vector<ir::Instruction*>&);
+    void analysisLVal(LVal*, vector<ir::Instruction*>&,bool p);
     void analysisNumber(Number*);
     void analysisLOrExp(LOrExp*, vector<ir::Instruction*>&);
     void analysisLAndExp(LAndExp*, vector<ir::Instruction*>&);

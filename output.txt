@@ -1,0 +1,299 @@
+void _global()
+	0: alloc array, 110
+	1: store 0, array, 0
+	2: store 0, array, 1
+	3: store 0, array, 2
+	4: store 0, array, 3
+	5: store 0, array, 4
+	6: store 0, array, 5
+	7: store 0, array, 6
+	8: store 0, array, 7
+	9: store 0, array, 8
+	10: store 0, array, 9
+	11: store 0, array, 10
+	12: store 0, array, 11
+	13: store 0, array, 12
+	14: store 0, array, 13
+	15: store 0, array, 14
+	16: store 0, array, 15
+	17: store 0, array, 16
+	18: store 0, array, 17
+	19: store 0, array, 18
+	20: store 0, array, 19
+	21: store 0, array, 20
+	22: store 0, array, 21
+	23: store 0, array, 22
+	24: store 0, array, 23
+	25: store 0, array, 24
+	26: store 0, array, 25
+	27: store 0, array, 26
+	28: store 0, array, 27
+	29: store 0, array, 28
+	30: store 0, array, 29
+	31: store 0, array, 30
+	32: store 0, array, 31
+	33: store 0, array, 32
+	34: store 0, array, 33
+	35: store 0, array, 34
+	36: store 0, array, 35
+	37: store 0, array, 36
+	38: store 0, array, 37
+	39: store 0, array, 38
+	40: store 0, array, 39
+	41: store 0, array, 40
+	42: store 0, array, 41
+	43: store 0, array, 42
+	44: store 0, array, 43
+	45: store 0, array, 44
+	46: store 0, array, 45
+	47: store 0, array, 46
+	48: store 0, array, 47
+	49: store 0, array, 48
+	50: store 0, array, 49
+	51: store 0, array, 50
+	52: store 0, array, 51
+	53: store 0, array, 52
+	54: store 0, array, 53
+	55: store 0, array, 54
+	56: store 0, array, 55
+	57: store 0, array, 56
+	58: store 0, array, 57
+	59: store 0, array, 58
+	60: store 0, array, 59
+	61: store 0, array, 60
+	62: store 0, array, 61
+	63: store 0, array, 62
+	64: store 0, array, 63
+	65: store 0, array, 64
+	66: store 0, array, 65
+	67: store 0, array, 66
+	68: store 0, array, 67
+	69: store 0, array, 68
+	70: store 0, array, 69
+	71: store 0, array, 70
+	72: store 0, array, 71
+	73: store 0, array, 72
+	74: store 0, array, 73
+	75: store 0, array, 74
+	76: store 0, array, 75
+	77: store 0, array, 76
+	78: store 0, array, 77
+	79: store 0, array, 78
+	80: store 0, array, 79
+	81: store 0, array, 80
+	82: store 0, array, 81
+	83: store 0, array, 82
+	84: store 0, array, 83
+	85: store 0, array, 84
+	86: store 0, array, 85
+	87: store 0, array, 86
+	88: store 0, array, 87
+	89: store 0, array, 88
+	90: store 0, array, 89
+	91: store 0, array, 90
+	92: store 0, array, 91
+	93: store 0, array, 92
+	94: store 0, array, 93
+	95: store 0, array, 94
+	96: store 0, array, 95
+	97: store 0, array, 96
+	98: store 0, array, 97
+	99: store 0, array, 98
+	100: store 0, array, 99
+	101: store 0, array, 100
+	102: store 0, array, 101
+	103: store 0, array, 102
+	104: store 0, array, 103
+	105: store 0, array, 104
+	106: store 0, array, 105
+	107: store 0, array, 106
+	108: store 0, array, 107
+	109: store 0, array, 108
+	110: store 0, array, 109
+	111: def n, 0
+	112: return null
+end
+
+void init(int n_init_S1)
+	0: def i_init_S1, 1
+	1: mov t0, i_init_S1
+	2: mov t1, n_init_S1
+	3: mov t2, n_init_S1
+	4: mul t1, t2, t1
+	5: mov t1, t1
+	6: mov t2, 1
+	7: add t1, t2, t1
+	8: leq t0, t0, t1
+	9: if t0 goto [pc, 2]
+	10: goto [pc, 11]
+	11: def t0, 0
+	12: mov t1, i_init_S1
+	13: add t0, t0, t1
+	14: sub t1, 0, 1
+	15: store t1, array, t0
+	16: mov t1, i_init_S1
+	17: mov t2, 1
+	18: add t1, t2, t1
+	19: mov i_init_S1, t1
+	20: goto [pc, -19]
+	21: return null
+end
+
+int findfa(int a_findfa_S1)
+	0: def t0, 0
+	1: mov t1, a_findfa_S1
+	2: add t0, t0, t1
+	3: load array_elem, array, t0
+	4: mov t1, array_elem
+	5: eq t1, a_findfa_S1, t1
+	6: if t1 goto [pc, 2]
+	7: goto [pc, 3]
+	8: return a_findfa_S1
+	9: goto [pc, 16]
+	10: def t0, 0
+	11: mov t1, a_findfa_S1
+	12: add t0, t0, t1
+	13: def h1, 0
+	14: def t2, 0
+	15: mov t3, a_findfa_S1
+	16: add t2, t2, t3
+	17: load array_elem, array, t2
+	18: call h1, findfa(array_elem)
+	19: store h1, array, t0
+	20: def t3, 0
+	21: mov t4, a_findfa_S1
+	22: add t3, t3, t4
+	23: load array_elem, array, t3
+	24: return array_elem
+end
+
+void mmerge(int a_mmerge_S1,int b_mmerge_S1)
+	0: def h0, 0
+	1: call h0, findfa(a_mmerge_S1)
+	2: def m_mmerge_S1, h0
+	3: def h1, 0
+	4: call h1, findfa(b_mmerge_S1)
+	5: def n_mmerge_S1, h1
+	6: mov t2, m_mmerge_S1
+	7: neq t2, n_mmerge_S1, t2
+	8: if t2 goto [pc, 2]
+	9: goto [pc, 6]
+	10: def t2, 0
+	11: mov t3, m_mmerge_S1
+	12: add t2, t2, t3
+	13: store n_mmerge_S1, array, t2
+	14: goto [pc, 1]
+	15: return null
+end
+
+int main()
+	0: call null, _global()
+	1: def m_main_S1, 0
+	2: def a_main_S1, 0
+	3: def b_main_S1, 0
+	4: mov n, 4
+	5: mov m_main_S1, 10
+	6: def i_main_S1, 0
+	7: def flag_main_S1, 0
+	8: call h0, init(n)
+	9: mov t1, n
+	10: mov t2, n
+	11: mul t1, t2, t1
+	12: mov t1, t1
+	13: mov t2, 1
+	14: add t1, t2, t1
+	15: def k_main_S1, t1
+	16: mov t1, i_main_S1
+	17: lss t1, t1, m_main_S1
+	18: if t1 goto [pc, 2]
+	19: goto [pc, 78]
+	20: def h0, 0
+	21: call h0, getint()
+	22: mov a_main_S1, h0
+	23: def h1, 0
+	24: call h1, getint()
+	25: mov b_main_S1, h1
+	26: not t2, flag_main_S1
+	27: if t2 goto [pc, 2]
+	28: goto [pc, 64]
+	29: mov t0, n
+	30: mov t1, a_main_S1
+	31: mov t2, 1
+	32: sub t1, t1, t2
+	33: mov t1, t1
+	34: mul t0, t1, t0
+	35: mov t0, t0
+	36: mov t1, b_main_S1
+	37: add t0, t1, t0
+	38: def loc_main_S3, t0
+	39: def t0, 0
+	40: mov t1, loc_main_S3
+	41: add t0, t0, t1
+	42: store loc_main_S3, array, t0
+	43: def t1, 0
+	44: mov t2, 0
+	45: add t1, t1, t2
+	46: load array_elem, array, t1
+	47: mov t2, array_elem
+	48: sub t3, 0, 1
+	49: neq t2, t3, t2
+	50: if t2 goto [pc, 2]
+	51: goto [pc, 18]
+	52: def t2, 0
+	53: mov t3, k_main_S1
+	54: add t2, t2, t3
+	55: load array_elem, array, t2
+	56: mov t3, array_elem
+	57: sub t4, 0, 1
+	58: neq t3, t4, t3
+	59: if t3 goto [pc, 2]
+	60: goto [pc, 8]
+	61: def h3, 0
+	62: call h3, findfa(0)
+	63: mov t4, h3
+	64: def h5, 0
+	65: call h5, findfa(k_main_S1)
+	66: eq t4, h5, t4
+	67: and t3, t3, t4
+	68: and t2, t2, t3
+	69: if t2 goto [pc, 2]
+	70: goto [pc, 21]
+	71: mov flag_main_S1, 1
+	72: mov t0, i_main_S1
+	73: mov t1, 1
+	74: add t0, t1, t0
+	75: def tmp_main_S4, t0
+	76: def t1, 0
+	77: mov t2, 0
+	78: add t1, t1, t2
+	79: load array_elem, array, t1
+	80: call h0, putint(array_elem)
+	81: call h2, putch(10)
+	82: def t4, 0
+	83: mov t5, k_main_S1
+	84: add t4, t4, t5
+	85: load array_elem, array, t4
+	86: call h3, putint(array_elem)
+	87: call h5, putch(10)
+	88: call h6, putint(tmp_main_S4)
+	89: call h7, putch(10)
+	90: goto [pc, 1]
+	91: goto [pc, 1]
+	92: mov t8, i_main_S1
+	93: mov t9, 1
+	94: add t8, t9, t8
+	95: mov i_main_S1, t8
+	96: goto [pc, 1]
+	97: not t8, flag_main_S1
+	98: if t8 goto [pc, 2]
+	99: goto [pc, 5]
+	100: sub t1, 0, 1
+	101: call h0, putint(t1)
+	102: call h1, putch(10)
+	103: goto [pc, 1]
+	104: return 0
+end
+
+GVT:
+	array int* 110
+	n int 0

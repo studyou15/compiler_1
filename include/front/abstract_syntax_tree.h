@@ -261,7 +261,8 @@
      bool is_computable = false;
      string v;
      Type t;
-     int i;  // array index, legal if t is IntPtr or FloatPtr
+     string i;
+     //int i;  // array index, legal if t is IntPtr or FloatPtr
  
      /**
       * @brief constructor
