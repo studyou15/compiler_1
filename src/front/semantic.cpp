@@ -1,7 +1,8 @@
 #include "front/semantic.h"
 
 #include <cassert>
-
+#include <sstream>
+#include <iomanip>
 using ir::Function;
 using ir::Instruction;
 using ir::Operand;
@@ -45,8 +46,9 @@ map<std::string, ir::Function *> *frontend::get_lib_funcs()
 vector<int> while_s;
 vector<int> while_e;
 
-string const_n = "";
+string const_n = "X";
 bool SZ = 0;
+Type ExpT = Type::IntLiteral;
 
 void frontend::SymbolTable::add_scope()
 {
@@ -101,6 +103,7 @@ void frontend::Analyzer::analysisCompUnit(CompUnit *root, ir::Program &program)
     else if (FuncDef *node = dynamic_cast<FuncDef *>(root->children[0]))
     {
         Function *new_func = new Function();
+        tmp_cnt = 0;
         analysisFuncDef(node, new_func);
         program.addFunction(*new_func);
     }
@@ -194,7 +197,7 @@ Type frontend::Analyzer::analysisFuncType(FuncType *root) // solve
 
 void frontend::Analyzer::analysisBlock(Block *root, vector<ir::Instruction *> &buffer, bool p)
 {
-    tmp_cnt = 0;
+    // tmp_cnt = 0;
     if (p) // 不是从函数进入时，而是从while，if等进入block
     {
         symbol_table.add_scope();
@@ -260,7 +263,9 @@ void frontend::Analyzer::analysisStmt(Stmt *root, vector<ir::Instruction *> &buf
                 }
                 else
                 {
-                    assert(0 && "to be continue");
+                    string name = "f2i_t" + std::to_string(tmp_cnt); // 几个名称从创建开始就是一个类型不会变
+                    buffer.push_back(new Instruction({exp->v, exp->t}, {}, {name, Type::Int}, {Operator::cvt_f2i}));
+                    buffer.push_back(new Instruction({name, Type::Int}, {}, {}, {Operator::_return}));
                 }
             }
             else if (symbol_table.functions[namespa]->returnType == Type::Float)
@@ -364,7 +369,10 @@ void frontend::Analyzer::analysisStmt(Stmt *root, vector<ir::Instruction *> &buf
         GET_CHILD_PTR(exp, Exp, 2);
 
         analysisLVal(lval, buffer, true);
+        if (lval->t == Type::Float || lval->t == Type::FloatLiteral)
+            ExpT = Type::FloatLiteral;
         analysisExp(exp, buffer);
+        ExpT = Type::IntLiteral;
         Operand tx("t" + std::to_string(tmp_cnt++), lval->t);
         if (lval->children.size() > 1) // 处理数组赋值
         {
@@ -397,7 +405,7 @@ void frontend::Analyzer::analysisStmt(Stmt *root, vector<ir::Instruction *> &buf
                 buffer.push_back(new Instruction({exp->v, exp->t}, {}, {lval->v, lval->t}, Operator::mov));
         }
 
-        tmp_cnt--;
+        // tmp_cnt--;
     }
 }
 
@@ -423,6 +431,7 @@ void frontend::Analyzer::analysisLOrExp(LOrExp *root, vector<ir::Instruction *> 
         buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
         root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
         root->t = Type::Int;
+        tmp_cnt++;
     }
 
     Instruction *branch = new Instruction({root->v, root->t}, {}, {"0", ir::Type::IntLiteral}, Operator::_goto);
@@ -433,7 +442,19 @@ void frontend::Analyzer::analysisLOrExp(LOrExp *root, vector<ir::Instruction *> 
 
     if (p1->v[0] >= '0' && p1->v[0] <= '9')
     {
-        p1->t = Type::IntLiteral;
+        if (p1->v.find(".") != -1)
+        {
+            if (stof(p1->v) > 0)
+            {
+                p1->v = "1";
+                p1->t = Type::IntLiteral;
+            }
+            else
+            {
+                p1->v = "0";
+                p1->t = Type::IntLiteral;
+            }
+        }
     }
     buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::_or));
     branch->des.name = std::to_string(buffer.size() - rback + 1);
@@ -447,7 +468,7 @@ void frontend::Analyzer::analysisLOrExp(LOrExp *root, vector<ir::Instruction *> 
     //     }
     //     buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::_or));
     // }
-    tmp_cnt--;
+    // tmp_cnt--;
 }
 
 void frontend::Analyzer::analysisLAndExp(LAndExp *root, vector<ir::Instruction *> &buffer)
@@ -461,10 +482,15 @@ void frontend::Analyzer::analysisLAndExp(LAndExp *root, vector<ir::Instruction *
     if (root->v[0] != 't')
     {
         string name = "t" + std::to_string(tmp_cnt++);
-        buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
+        if (p0->t == Type::Float || p0->t == Type::FloatLiteral)
+            buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::cvt_f2i));
+        else
+            buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
         root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
         root->t = Type::Int;
+        tmp_cnt++;
     }
+
     buffer.push_back(new Instruction({root->v, root->t}, {}, {"2", ir::Type::IntLiteral}, Operator::_goto));
     Instruction *branch = new Instruction({}, {}, {"0", ir::Type::IntLiteral}, Operator::_goto);
     buffer.push_back(branch);
@@ -474,7 +500,21 @@ void frontend::Analyzer::analysisLAndExp(LAndExp *root, vector<ir::Instruction *
 
     if (p1->v[0] >= '0' && p1->v[0] <= '9')
     {
-        p1->t = Type::IntLiteral;
+        if (p1->v.find(".") != -1)
+        {
+            if (stof(p1->v) > 0)
+            {
+                p1->v = "1";
+                p1->t = Type::IntLiteral;
+            }
+            else
+            {
+                p1->v = "0";
+                p1->t = Type::IntLiteral;
+            }
+        }
+        else
+            p1->t = Type::IntLiteral;
     }
     buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::_and));
     branch->des.name = std::to_string(buffer.size() - rback + 1);
@@ -488,7 +528,7 @@ void frontend::Analyzer::analysisLAndExp(LAndExp *root, vector<ir::Instruction *
     //     }
     //     buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::_and));
     // }
-    tmp_cnt--;
+    // tmp_cnt--;
 }
 
 void frontend::Analyzer::analysisEqExp(EqExp *root, vector<ir::Instruction *> &buffer) // 没有考虑float情况
@@ -505,8 +545,9 @@ void frontend::Analyzer::analysisEqExp(EqExp *root, vector<ir::Instruction *> &b
         buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
         root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
         root->t = Type::Int;
+        tmp_cnt++;
     }
-    tmp_cnt++;
+
     for (int i = 2; i < SIZE; i += 2)
     {
         GET_CHILD_PTR(p1, RelExp, i);
@@ -521,7 +562,7 @@ void frontend::Analyzer::analysisEqExp(EqExp *root, vector<ir::Instruction *> &b
         else
             buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::neq));
     }
-    tmp_cnt--;
+    // tmp_cnt--;
 }
 
 void frontend::Analyzer::analysisRelExp(RelExp *root, vector<ir::Instruction *> &buffer)
@@ -535,30 +576,64 @@ void frontend::Analyzer::analysisRelExp(RelExp *root, vector<ir::Instruction *> 
     if (root->v[0] != 't')
     {
         string name = "t" + std::to_string(tmp_cnt);
-        buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
-        root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
-        root->t = Type::Int;
-    }
-    tmp_cnt++;
-    for (int i = 2; i < SIZE; i += 2)
-    {
-        GET_CHILD_PTR(p1, AddExp, i);
-        analysisAddExp(p1, buffer);
-        GET_CHILD_PTR(pt, Term, i - 1);
-        if (p1->v[0] >= '0' && p1->v[0] <= '9')
+        if (root->t == Type::Int || root->t == Type::IntLiteral)
         {
-            p1->t = Type::IntLiteral;
+            buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, Operator::mov));
+            root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
+            root->t = Type::Int;
         }
-        if (pt->token.type == TokenType::LSS)
-            buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::lss));
-        else if (pt->token.type == TokenType::LEQ)
-            buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::leq));
-        else if (pt->token.type == TokenType::GTR)
-            buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::gtr));
-        else if (pt->token.type == TokenType::GEQ)
-            buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::geq));
+        else
+        {
+            buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Float}, Operator::fmov));
+            root->v = name; // 不管是什么类型的数，都将其放入一个寄存器中，防止了如果是变量，导致变量名出问题
+            root->t = Type::Float;
+        }
+        tmp_cnt++;
     }
-    tmp_cnt--;
+    if (root->t == Type::Int || root->t == Type::IntLiteral)
+    {
+        for (int i = 2; i < SIZE; i += 2)
+        {
+            GET_CHILD_PTR(p1, AddExp, i);
+            analysisAddExp(p1, buffer);
+            GET_CHILD_PTR(pt, Term, i - 1);
+            if (p1->v[0] >= '0' && p1->v[0] <= '9')
+            {
+                p1->t = Type::IntLiteral;
+            }
+            if (pt->token.type == TokenType::LSS)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::lss));
+            else if (pt->token.type == TokenType::LEQ)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::leq));
+            else if (pt->token.type == TokenType::GTR)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::gtr));
+            else if (pt->token.type == TokenType::GEQ)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::geq));
+        }
+    }
+    else
+    {
+        for (int i = 2; i < SIZE; i += 2)
+        {
+            GET_CHILD_PTR(p1, AddExp, i);
+            ExpT = Type::FloatLiteral;
+            analysisAddExp(p1, buffer);
+            ExpT = Type::IntLiteral;
+            GET_CHILD_PTR(pt, Term, i - 1);
+
+            if (pt->token.type == TokenType::LSS)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::flss));
+            else if (pt->token.type == TokenType::LEQ)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::fleq));
+            else if (pt->token.type == TokenType::GTR)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::fgtr));
+            else if (pt->token.type == TokenType::GEQ)
+                buffer.push_back(new Instruction({root->v, root->t}, {p1->v, p1->t}, {root->v, root->t}, Operator::fgeq));
+        }
+        string name = "t" + std::to_string(tmp_cnt++);
+        buffer.push_back(new Instruction({root->v, root->t}, {}, {name, Type::Int}, {Operator::cvt_f2i}));
+    }
+    // tmp_cnt--;
 }
 
 void frontend::Analyzer::analysisExp(Exp *root, vector<ir::Instruction *> &buffer)
@@ -601,25 +676,46 @@ void frontend::Analyzer::analysisAddExp(AddExp *root, vector<ir::Instruction *> 
     }
     else if (root->t == Type::FloatLiteral || root->t == Type::Float)
     {
-        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::mov));
+        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::fmov));
         root->t = Type::Float;
         root->v = tmp_name;
     }
-
+    string ans = const_n;
     for (int i = 2; i < SIZE; i += 2)
     {
         GET_CHILD_PTR(p1, MulExp, i);
         GET_CHILD_PTR(fh, Term, i - 1);
         analysisMulExp(p1, buffer);
         string tmp_name2 = "t" + std::to_string(tmp_cnt++);
+        
+        if(const_n != "X")
+        {
+            float temp = stof(const_n) + stof(ans);
+            std::ostringstream oss;
+            oss<<std::fixed<<std::setprecision(9)<<temp;
+            ans = oss.str();
+        }
+
         switch (root->t)
         {
         case Type::Int:
         {
             if (p1->t == Type::Float || p1->t == Type::FloatLiteral)
-                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Int}, Operator::cvt_f2i));
-            else
-                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Int}, Operator::mov));
+            {
+                buffer.push_back(new Instruction({root->v, root->t}, {}, {tmp_name2, Type::Float}, Operator::cvt_i2f));
+                root->t = Type::Float;
+                root->v = tmp_name2;
+                if (fh->token.type == TokenType::PLUS)
+                {
+                    buffer.push_back(new Instruction({root->v, Type::Float}, {p1->v, p1->t}, {root->v, Type::Float}, Operator::fadd));
+                }
+                else
+                {
+                    buffer.push_back(new Instruction({root->v, Type::Float}, {p1->v, p1->t}, {root->v, Type::Float}, Operator::fsub));
+                }
+                break;
+            }
+            buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Int}, Operator::mov));
             if (fh->token.type == TokenType::PLUS)
             {
                 buffer.push_back(new Instruction({tmp_name2, Type::Int}, {root->v, Type::Int}, {root->v, Type::Int}, Operator::add));
@@ -628,7 +724,7 @@ void frontend::Analyzer::analysisAddExp(AddExp *root, vector<ir::Instruction *> 
             {
                 buffer.push_back(new Instruction({root->v, Type::Int}, {tmp_name2, Type::Int}, {root->v, Type::Int}, Operator::sub));
             }
-            tmp_cnt--;
+            // tmp_cnt--;
             break;
         }
         case Type::Float:
@@ -636,23 +732,24 @@ void frontend::Analyzer::analysisAddExp(AddExp *root, vector<ir::Instruction *> 
             if (p1->t == Type::Int || p1->t == Type::IntLiteral)
                 buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Float}, Operator::cvt_i2f));
             else
-                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Float}, Operator::mov));
+                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Float}, Operator::fmov));
             if (fh->token.type == TokenType::PLUS)
             {
-                buffer.push_back(new Instruction({tmp_name2, Type::Float}, {root->v, Type::Float}, {root->v, Type::Float}, Operator::add));
+                buffer.push_back(new Instruction({tmp_name2, Type::Float}, {root->v, Type::Float}, {root->v, Type::Float}, Operator::fadd));
             }
             else
             {
-                buffer.push_back(new Instruction({root->v, Type::Float}, {tmp_name2, Type::Float}, {root->v, Type::Float}, Operator::sub));
+                buffer.push_back(new Instruction({root->v, Type::Float}, {tmp_name2, Type::Float}, {root->v, Type::Float}, Operator::fsub));
             }
-            tmp_cnt--;
+            // tmp_cnt--;
             break;
         }
         default:
             break;
         }
     }
-    tmp_cnt--;
+    const_n = ans;
+    // tmp_cnt--;
 }
 
 void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> &buffer)
@@ -689,25 +786,47 @@ void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> 
     }
     else if (root->t == Type::FloatLiteral || root->t == Type::Float)
     {
-        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::mov));
+        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::fmov));
         root->t = Type::Float;
         root->v = tmp_name;
     }
 
+    string ans = const_n;
     for (int i = 2; i < SIZE; i += 2)
     {
         GET_CHILD_PTR(p1, UnaryExp, i);
         GET_CHILD_PTR(fh, Term, i - 1);
         analysisUnaryExp(p1, buffer);
         string tmp_name2 = "t" + std::to_string(tmp_cnt++);
+
+        if(const_n != "X")
+        {
+            float temp = stof(const_n) + stof(ans);
+            std::ostringstream oss;
+            oss<<std::fixed<<std::setprecision(9)<<temp;
+            ans = oss.str();
+        }
+
         switch (root->t)
         {
         case Type::Int:
         {
             if (p1->t == Type::Float || p1->t == Type::FloatLiteral)
-                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Int}, Operator::cvt_f2i));
-            else
-                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Int}, Operator::mov));
+            {
+                buffer.push_back(new Instruction({root->v, root->t}, {}, {tmp_name2, Type::Float}, Operator::cvt_i2f));
+                root->v = tmp_name2;
+                root->t = Type::Float;
+                if (fh->token.type == TokenType::MULT)
+                {
+                    buffer.push_back(new Instruction({root->v, Type::Float}, {p1->v, p1->t}, {root->v, Type::Float}, Operator::fmul));
+                }
+                else if (fh->token.type == TokenType::DIV)
+                {
+                    buffer.push_back(new Instruction({root->v, Type::Float}, {p1->v, p1->t}, {root->v, Type::Float}, Operator::fdiv));
+                }
+                break;
+            }
+            buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Int}, Operator::mov));
             if (fh->token.type == TokenType::MULT)
             {
                 buffer.push_back(new Instruction({tmp_name2, Type::Int}, {root->v, Type::Int}, {root->v, Type::Int}, Operator::mul));
@@ -720,7 +839,7 @@ void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> 
             {
                 buffer.push_back(new Instruction({root->v, Type::Int}, {tmp_name2, Type::Int}, {root->v, Type::Int}, Operator::mod));
             }
-            tmp_cnt--;
+            // tmp_cnt--;
             break;
         }
         case Type::Float:
@@ -728,7 +847,7 @@ void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> 
             if (p1->t == Type::Int || p1->t == Type::IntLiteral)
                 buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Float}, Operator::cvt_i2f));
             else
-                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Float}, Operator::mov));
+                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {tmp_name2, Type::Float}, Operator::fmov));
             if (fh->token.type == TokenType::MULT)
             {
                 buffer.push_back(new Instruction({tmp_name2, Type::Float}, {root->v, Type::Float}, {root->v, Type::Float}, Operator::fmul));
@@ -737,14 +856,15 @@ void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> 
             {
                 buffer.push_back(new Instruction({root->v, Type::Float}, {tmp_name2, Type::Float}, {root->v, Type::Float}, Operator::fdiv));
             }
-            tmp_cnt--;
+            // tmp_cnt--;
             break;
         }
         default:
             break;
         }
     }
-    tmp_cnt--;
+    const_n = ans;
+    // tmp_cnt--;
 }
 // UnaryExp->PrimaryExp | Ident '(' [FuncRParams] ')' | UnaryOp UnaryExp
 void frontend::Analyzer::analysisUnaryExp(UnaryExp *root, vector<ir::Instruction *> &buffer)
@@ -769,12 +889,23 @@ void frontend::Analyzer::analysisUnaryExp(UnaryExp *root, vector<ir::Instruction
                 buffer.push_back(new Instruction({"0.0", Type::FloatLiteral}, {p1->v, p1->t}, {name, Type::Float}, Operator::fsub));
             else
                 buffer.push_back(new Instruction({"0", Type::IntLiteral}, {p1->v, p1->t}, {name, Type::Int}, Operator::sub));
+            if(const_n != "X")
+                const_n = "-" + const_n;
         }
         else if (node->op == TokenType::NOT)
         {
-            buffer.push_back(new Instruction({p1->v, p1->t}, {}, {name, Type::Int}, Operator::_not));
+            if (p1->t == Type::Int || p1->t == Type::IntLiteral)
+                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {name, Type::Int}, Operator::_not));
+            else
+            {
+                buffer.push_back(new Instruction({p1->v, p1->t}, {}, {name, Type::Int}, Operator::cvt_f2i));
+                buffer.push_back(new Instruction({name, Type::Int}, {}, {name, Type::Int}, Operator::_not));
+            }
+            root->v = name;
+            root->t = Type::Int;
+            return;
         }
-        tmp_cnt--;
+        // tmp_cnt--;
         root->v = name;
         root->t = (p1->t == Type::Float || p1->t == Type::FloatLiteral) ? Type::Float : Type::Int;
     }
@@ -826,8 +957,18 @@ void frontend::Analyzer::analysisFuncRParams(FuncRParams *root, vector<ir::Instr
 { // 未处理int调用float型，问题？如果exp是立即数怎么处理，名字没有更改
     for (int i = 0; i < SIZE; i += 2)
     {
+        if (params[i / 2].type == Type::Float)
+            ExpT = Type::FloatLiteral;
         GET_CHILD_PTR(exp, Exp, i);
         analysisExp(exp, buffer);
+        ExpT = Type::IntLiteral;
+        if ((params[i / 2].type == Type::Int || params[i / 2].type == Type::IntLiteral) && (exp->t == Type::Float || exp->t == Type::FloatLiteral))
+        {
+            string name = "t" + std::to_string(tmp_cnt++);
+            buffer.push_back(new Instruction({exp->v, exp->t}, {}, {name, Type::Int}, Operator::cvt_f2i));
+            params[i / 2] = Operand(name, Type::Int);
+            continue;
+        }
         params[i / 2] = Operand(exp->v, exp->t);
     }
 }
@@ -869,6 +1010,9 @@ void frontend::Analyzer::analysisLVal(LVal *root, vector<ir::Instruction *> &buf
     root->v = ste.operand.name;
     root->t = ste.operand.type;
 
+    if(const_n != "X")
+        const_n = root->v;
+
     if (SIZE == 1)
         return;
 
@@ -906,7 +1050,7 @@ void frontend::Analyzer::analysisLVal(LVal *root, vector<ir::Instruction *> &buf
             {offset_tmp, Type::Int}, // 结果存回offset_tmp
             Operator::add));
 
-        tmp_cnt--; // 释放dim_tmp（t1）
+        // tmp_cnt--; // 释放dim_tmp（t1）
     }
 
     // tmp_cnt -= 1; // 释放offset_tmp（t0）
@@ -936,7 +1080,7 @@ void frontend::Analyzer::analysisNumber(Number *root) // solve
 
     if (term->token.type == TokenType::INTLTR)
     {
-        root->t = Type::IntLiteral;
+        root->t = ExpT;
         if (num_str.find("0x") == 0 || num_str.find("0X") == 0)
         {
             root->v = std::to_string(std::stoi(num_str.substr(2), 0, 16));
@@ -949,6 +1093,11 @@ void frontend::Analyzer::analysisNumber(Number *root) // solve
         {
             root->v = std::to_string(std::stoi(num_str.substr(1), 0, 8));
         }
+        else if (num_str[0] == '.')
+        {
+            root->v = num_str.insert(0, "0");
+            root->t = Type::FloatLiteral;
+        }
         else
         {
             root->v = num_str;
@@ -957,9 +1106,12 @@ void frontend::Analyzer::analysisNumber(Number *root) // solve
     else
     {
         root->t = Type::FloatLiteral;
+        if (num_str[0] == '.')
+            num_str.insert(0, "0");
         root->v = num_str;
     }
-    const_n = root->v;
+    if(const_n != "X")
+        const_n = root->v;
 }
 
 void frontend::Analyzer::analysisDecl(Decl *root, vector<ir::Instruction *> &buffer)
@@ -997,8 +1149,15 @@ void frontend::Analyzer::analysisConstDef(ConstDef *root, Type type, vector<ir::
     if (SIZE == 3)
     {
         GET_CHILD_PTR(val, ConstInitVal, 2);
+        const_n = "";
         analysisConstInitVal(val, type, buffer);
+        if(type == Type::Int && const_n.find(".")!=-1)
+        {
+            const_n.erase(const_n.find("."));
+        }
         ste.operand.name = const_n;
+        const_n = "X";
+
         ste.operand.type = (type == Type::Int) ? Type::IntLiteral : Type::FloatLiteral;
         symbol_table.scope_stack.back().table[ident] = ste;
 
@@ -1006,13 +1165,13 @@ void frontend::Analyzer::analysisConstDef(ConstDef *root, Type type, vector<ir::
             buffer.push_back(new Instruction(
                 {val->vecV[0].name, val->vecV[0].type},
                 {},
-                ste.operand,
+                {ident, Type::Float},
                 Operator::fdef));
         else
             buffer.push_back(new Instruction(
                 {val->vecV[0].name, val->vecV[0].type},
                 {},
-                ste.operand,
+                {ident, Type::Int},
                 Operator::def));
         return;
     }
@@ -1031,7 +1190,10 @@ void frontend::Analyzer::analysisConstDef(ConstDef *root, Type type, vector<ir::
         i++; // 跳过LBRACK
         GET_CHILD_PTR(pk, ConstExp, i);
         SZ = true;
+        if (type == Type::Float || type == Type::FloatLiteral)
+            ExpT = Type::FloatLiteral;
         analysisConstExp(pk, buffer);
+        ExpT = Type::IntLiteral;
         SZ = false;
         Len *= stoi(pk->v);
         ste.dimension.push_back(stoi(pk->v));
@@ -1065,7 +1227,10 @@ void frontend::Analyzer::analysisConstInitVal(ConstInitVal *root, Type type, vec
 {
     if (ConstExp *node = dynamic_cast<ConstExp *>(root->children[0]))
     {
+        if (type == Type::Float || type == Type::FloatLiteral)
+            ExpT = Type::FloatLiteral;
         analysisConstExp(node, buffer);
+        ExpT = Type::IntLiteral;
         std::string temp_name = "t" + std::to_string(tmp_cnt++);
         Operand dest(temp_name, type);
 
@@ -1104,7 +1269,7 @@ void frontend::Analyzer::analysisConstInitVal(ConstInitVal *root, Type type, vec
             assert(0 && "Unsupported type in initval");
         }
         root->vecV.push_back({node->v, node->t});
-        tmp_cnt--;
+        // tmp_cnt--;
     }
     else if (Term *node = dynamic_cast<Term *>(root->children[0]))
     {
@@ -1217,7 +1382,7 @@ void frontend::Analyzer::analysisVarDef(VarDef *root, ir::Type type, vector<ir::
                 buffer.push_back(new ir::Instruction(
                     ste.operand,
                     {std::to_string(j), Type::IntLiteral},
-                    {"0",Type::IntLiteral},
+                    {"0", Type::IntLiteral},
                     Operator::store));
             }
             return;
@@ -1234,11 +1399,18 @@ void frontend::Analyzer::analysisVarDef(VarDef *root, ir::Type type, vector<ir::
         }
         for (; j < Len; j++)
         {
-            buffer.push_back(new ir::Instruction(
-                ste.operand,
-                {std::to_string(j), Type::IntLiteral},
-                {"0",Type::IntLiteral},
-                Operator::store));
+            if (type == Type::Int)
+                buffer.push_back(new ir::Instruction(
+                    ste.operand,
+                    {std::to_string(j), Type::IntLiteral},
+                    {"0", Type::IntLiteral},
+                    Operator::store));
+            else
+                buffer.push_back(new ir::Instruction(
+                    ste.operand,
+                    {std::to_string(j), Type::IntLiteral},
+                    {"0", Type::FloatLiteral},
+                    Operator::store));
         }
     }
     else
@@ -1267,8 +1439,11 @@ void frontend::Analyzer::analysisInitVal(InitVal *root, ir::Type type, vector<ir
 {
     if (Exp *node = dynamic_cast<Exp *>(root->children[0]))
     {
+        if (type == Type::Float)
+            ExpT = Type::FloatLiteral;
         analysisExp(node, buffer);
-        std::string temp_name = "t" + std::to_string(tmp_cnt++);
+        ExpT = Type::IntLiteral;
+        std::string temp_name = "t" + std::to_string(tmp_cnt);
         Operand dest(temp_name, type);
 
         // 类型检查和转换逻辑
@@ -1285,9 +1460,11 @@ void frontend::Analyzer::analysisInitVal(InitVal *root, ir::Type type, vector<ir
                 else if (node->t == ir::Type::Float)
                 {
                     buffer.push_back(new Instruction(
-                        {node->v, ir::Type::Float}, {}, {node->v, ir::Type::Int},
+                        {node->v, ir::Type::Float}, {}, {temp_name, ir::Type::Int},
                         Operator::cvt_f2i));
                     node->t = ir::Type::Int;
+                    node->v = temp_name;
+                    tmp_cnt++;
                 }
                 // buffer.push_back(new Instruction(
                 //     {node->v, node->t}, {}, dest, Operator::mov));
@@ -1301,9 +1478,11 @@ void frontend::Analyzer::analysisInitVal(InitVal *root, ir::Type type, vector<ir
                 else if (node->t == ir::Type::Int)
                 {
                     buffer.push_back(new Instruction(
-                        {node->v, ir::Type::Int}, {}, {node->v, ir::Type::Float},
+                        {node->v, ir::Type::Int}, {}, {temp_name, ir::Type::Float},
                         Operator::cvt_i2f));
                     node->t = ir::Type::Float;
+                    node->v = temp_name;
+                    tmp_cnt++;
                 }
                 // buffer.push_back(new Instruction(
                 //     {node->v, node->t}, {}, dest, Operator::fmov));
@@ -1313,7 +1492,7 @@ void frontend::Analyzer::analysisInitVal(InitVal *root, ir::Type type, vector<ir
             }
         }
         root->vecV.push_back({node->v, node->t});
-        tmp_cnt--;
+        // tmp_cnt--;
     }
     else if (SIZE == 2)
         return;

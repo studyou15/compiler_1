@@ -133,7 +133,7 @@ bool frontend::DFA::next(char input, Token& buf)
                 assert(0 && "invalid Ident char");
             break;
         case frontend::State::op:
-            if(isdigit(input))
+            if(isdigit(input) || input == '.')
             {
                 buf.value = cur_str;
                 buf.type = get_op_type(cur_str);
@@ -201,42 +201,51 @@ std::string frontend::Scanner::preprocess(std::ifstream& fin)
     while (getline(fin, line)) 
     {
         size_t pos;
+        std::string processedLine;
         
         // 处理块注释 /* ... */
         if (!inBlockComment) {
-            pos = line.find("/*");
-            if (pos != std::string::npos) 
+            size_t blockStart = line.find("/*");
+            size_t lineCommentPos = line.find("//");
+            
+            // 只有在 // 不在 /* 前面时才处理块注释
+            if (blockStart != std::string::npos && 
+                (lineCommentPos == std::string::npos || blockStart < lineCommentPos)) 
             {
                 inBlockComment = true;
-                line = line.substr(0, pos);
+                processedLine = line.substr(0, blockStart);
+                
+                // 检查同一行是否有 */ 结束
+                size_t blockEnd = line.find("*/", blockStart + 2);
+                if (blockEnd != std::string::npos) {
+                    inBlockComment = false;
+                    processedLine += line.substr(blockEnd + 2);
+                }
+            } else {
+                processedLine = line;
             }
-        } else 
-        {
-            pos = line.find("*/");
-            if (pos != std::string::npos) 
-            {
+        } else {
+            size_t blockEnd = line.find("*/");
+            if (blockEnd != std::string::npos) {
                 inBlockComment = false;
-                line = line.substr(pos + 2);
-            } else 
-            {
-                line.clear(); // 仍在块注释中，忽略整行
+                processedLine = line.substr(blockEnd + 2);
+            } else {
+                processedLine.clear(); // 仍在块注释中，忽略整行
             }
         }
-
+    
         // 如果不是在块注释中，处理行注释 //
-        if (!inBlockComment) 
-        {
-            pos = line.find("//");
-            if (pos != std::string::npos) 
-            {
-                line = line.substr(0, pos);
+        if (!inBlockComment) {
+            pos = processedLine.find("//");
+            if (pos != std::string::npos) {
+                processedLine = processedLine.substr(0, pos);
             }
         }
-
+    
+        
         // 添加非空行到结果
-        if (!line.empty()) 
-        {
-            ss << line << ' ';
+        if (!processedLine.empty()) {
+            ss << processedLine << ' ';
         }
     }
 
@@ -268,7 +277,7 @@ frontend::TokenType frontend::get_Ident_type(std::string s)
     else if (s == "int")
         return frontend::TokenType::INTTK;
     else if (s == "float")
-        return frontend::TokenType::FLOATLTR;
+        return frontend::TokenType::FLOATTK;
     else if (s == "if")
         return frontend::TokenType::IFTK;
     else if (s == "else")
