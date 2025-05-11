@@ -1,4 +1,3 @@
-
 int array[110];
 int n;
 void init(int n) {

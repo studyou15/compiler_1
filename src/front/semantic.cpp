@@ -666,20 +666,25 @@ void frontend::Analyzer::analysisAddExp(AddExp *root, vector<ir::Instruction *> 
         }
         return;
     }
-    std::string tmp_name = "t" + std::to_string(tmp_cnt++);
 
-    if (root->t == Type::IntLiteral || root->t == Type::Int) // 多加了一条指令，将从上层传来的名字覆盖掉
+    if(p0->v[0] != 't')
     {
-        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Int}, Operator::mov));
-        root->t = Type::Int;
-        root->v = tmp_name;
+        std::string tmp_name = "t" + std::to_string(tmp_cnt++);
+
+        if (root->t == Type::IntLiteral || root->t == Type::Int) // 多加了一条指令，将从上层传来的名字覆盖掉
+        {
+            buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Int}, Operator::mov));
+            root->t = Type::Int;
+            root->v = tmp_name;
+        }
+        else if (root->t == Type::FloatLiteral || root->t == Type::Float)
+        {
+            buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::fmov));
+            root->t = Type::Float;
+            root->v = tmp_name;
+        }
     }
-    else if (root->t == Type::FloatLiteral || root->t == Type::Float)
-    {
-        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::fmov));
-        root->t = Type::Float;
-        root->v = tmp_name;
-    }
+
     string ans = const_n;
     for (int i = 2; i < SIZE; i += 2)
     {
@@ -776,19 +781,23 @@ void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> 
         }
         return;
     }
-    std::string tmp_name = "t" + std::to_string(tmp_cnt++);
 
-    if (root->t == Type::IntLiteral || root->t == Type::Int) // 多加了一条指令，将从上层传来的名字覆盖掉
+    if(p0->v[0] != 't')
     {
-        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Int}, Operator::mov));
-        root->t = Type::Int;
-        root->v = tmp_name;
-    }
-    else if (root->t == Type::FloatLiteral || root->t == Type::Float)
-    {
-        buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::fmov));
-        root->t = Type::Float;
-        root->v = tmp_name;
+        std::string tmp_name = "t" + std::to_string(tmp_cnt++);
+
+        if (root->t == Type::IntLiteral || root->t == Type::Int) // 多加了一条指令，将从上层传来的名字覆盖掉
+        {
+            buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Int}, Operator::mov));
+            root->t = Type::Int;
+            root->v = tmp_name;
+        }
+        else if (root->t == Type::FloatLiteral || root->t == Type::Float)
+        {
+            buffer.push_back(new Instruction({p0->v, p0->t}, {}, {tmp_name, Type::Float}, Operator::fmov));
+            root->t = Type::Float;
+            root->v = tmp_name;
+        }
     }
 
     string ans = const_n;
@@ -921,7 +930,7 @@ void frontend::Analyzer::analysisUnaryExp(UnaryExp *root, vector<ir::Instruction
         {
             func = (*get_lib_funcs())[ident->token.value];
         }
-        root->v = "h" + std::to_string(tmp_cnt++);
+        root->v = "t" + std::to_string(tmp_cnt++);
         root->t = func->returnType;
 
         if (root->t != ir::Type::null)
