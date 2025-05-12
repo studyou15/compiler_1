@@ -6,7 +6,7 @@
 #include "backend/rv_inst_impl.h"
 
 
-#include<map>
+#include<unordered_map>
 #include<string>
 #include<vector>
 #include<fstream>
@@ -15,7 +15,7 @@ namespace backend {
 
 // it is a map bewteen variable and its mem addr, the mem addr of a local variable can be identified by ($sp + off)
 struct stackVarMap {
-    std::map<ir::Operand, int> _table;
+    std::unordered_map<std::string, int> _table;
     int offset = -56;
     /**
      * @brief find the addr of a ir::Operand
@@ -29,12 +29,15 @@ struct stackVarMap {
      * @return the offset
     */
     void add_operand(ir::Operand, unsigned int size = 4);
+
 };
 
 
 struct Generator {
     const ir::Program& program;         // the program to gen
     std::ofstream& fout;                 // output file
+    stackVarMap varMap;                 // 存储变量和栈内存偏移量的映射
+    std::string current_func_name;      // 当前正在处理的函数名
 
     Generator(ir::Program&, std::ofstream&);
 
@@ -56,7 +59,26 @@ struct Generator {
     void paramSolve(const std::vector<ir::Operand>&);
     void InstrSolve(ir::Instruction*&);
 
+    // 指令处理函数
     void AddSolve(ir::Instruction*&);
+    void SubSolve(ir::Instruction*&);
+    void MulSolve(ir::Instruction*&);
+    void DivSolve(ir::Instruction*&);
+    void MovSolve(ir::Instruction*&);
+    void LoadSolve(ir::Instruction*&);
+    void StoreSolve(ir::Instruction*&);
+    void ReturnSolve(ir::Instruction*&);
+    void CallSolve(ir::Instruction*&);
+    // 浮点指令处理函数
+    void FAddSolve(ir::Instruction*&);
+    void FSubSolve(ir::Instruction*&);
+    void FMulSolve(ir::Instruction*&);
+    void FDivSolve(ir::Instruction*&);
+    void FMovSolve(ir::Instruction*&);
+    
+    // 类型转换指令
+    void CvtI2FSolve(ir::Instruction*&);
+    void CvtF2ISolve(ir::Instruction*&);
 };
 
 

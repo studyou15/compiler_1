@@ -106,22 +106,21 @@ def score_compiler(arg1):
                     fname, ftype = file.split('.')
                     ref_file = ref_dir + fname + ".out"
                     output_file = output_dir + fname + ".out" 
-                    exec_file = output_dir + fname + ".exe"
-                    cmd = ' '.join(["riscv32-unknown-linux-gnu-gcc", output_dir + file, "sylib-riscv-linux.a", '-o', exec_file])
+                    exec_file = "test_exec_static"
+                    cmd = ' '.join(["riscv32-unknown-linux-gnu-gcc", "-static", output_dir + file, "sylib-riscv-linux.a", "-o", exec_file])
                     os.system(cmd)
                     if not os.path.exists(exec_file):
                         record[file] = {"retval": -1, "err_detail": "executing cmd [" + cmd + "] failed, your assmbly can not produce a executable"}
                         continue
                 
                     # qemu 
-                    cmd = ' '.join(["qemu-riscv32.sh", exec_file])
+                    cmd = ' '.join(["qemu-riscv32", "./test_exec_static"])
                     input_file = testcase_dir + fname + ".in"
                     if os.path.exists(input_file):
                         cmd = ' '.join([cmd, "<", input_file])
-                    cmd = ' '.join([cmd, ">", output_file])
-                    cp = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL)
-                    with open(output_file, "a") as f:
-                        f.write("\n" + str(cp.returncode))
+                    # 完整重定向命令：覆盖输出文件，包含标准输出/错误和返回码
+                    cmd = f'({cmd}; echo $?) > {output_file} 2>&1'
+                    cp = subprocess.run(cmd, shell=True)
 
                     # diff
                     cmd = ' '.join(["diff", ref_file, output_file, '-wB'])
