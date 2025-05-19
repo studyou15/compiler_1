@@ -1,0 +1,232 @@
+	.option nopic
+	.data
+	.text
+	.align	2
+	.globl	_global
+	.type	_global,	@function
+_global:
+	addi	sp,sp,-520
+	sw	ra,516(sp)
+	sw	t0,512(sp)
+	sw	t1,508(sp)
+	sw	t2,504(sp)
+	sw	t3,500(sp)
+	addi	s0,sp,520
+._global_0:
+#0: return null
+	j	_global_return
+._global_1:
+_global_return:
+	lw	ra,516(sp)
+	lw	t0,512(sp)
+	lw	t1,508(sp)
+	lw	t2,504(sp)
+	lw	t3,500(sp)
+	addi	sp,sp,520
+	jr	ra
+	.size	_global,	.-_global
+	.align	2
+	.globl	c
+	.type	c,	@function
+c:
+	addi	sp,sp,-520
+	sw	ra,516(sp)
+	sw	t0,512(sp)
+	sw	t1,508(sp)
+	sw	t2,504(sp)
+	sw	t3,500(sp)
+	addi	s0,sp,520
+	sw	x10,-56(sp)
+.c_1:
+#1: def t0, 0
+	li	t2,0
+	sw	t2,-60(sp)
+.c_2:
+#2: mov t1, 0
+	li	t0,0
+	sw	t0,-64(sp)
+.c_3:
+#3: add t0, t0, t1
+	lw	t0,-60(sp)
+	lw	t1,-64(sp)
+	add	t2,t0,t1
+	sw	t2,-60(sp)
+.c_4:
+#4: store 1, s_c_S1, t0
+	li	t2,1
+	lw	t1,-60(sp)
+	lw	t4,-56(sp)
+	slli	t3,t1,2
+	add	t3,t4,t3
+	add	t3,sp,t3
+	sw	t2,0(t3)
+.c_5:
+#5: def t3, 0
+	li	t2,0
+	sw	t2,-68(sp)
+.c_6:
+#6: mov t4, 1
+	li	t0,1
+	sw	t0,-72(sp)
+.c_7:
+#7: add t3, t3, t4
+	lw	t0,-68(sp)
+	lw	t1,-72(sp)
+	add	t2,t0,t1
+	sw	t2,-68(sp)
+.c_8:
+#8: load s_c_S1_elem, s_c_S1, t3
+	lw	t1,-68(sp)
+	lw	t4,-56(sp)
+	slli	t3,t1,2
+	add	t3,t4,t3
+	add	t3,sp,t3
+	lw	t2,0(t3)
+	sw	t2,-76(sp)
+.c_9:
+#9: return s_c_S1_elem
+	lw	a0,-76(sp)
+	j	c_return
+.c_10:
+c_return:
+	lw	ra,516(sp)
+	lw	t0,512(sp)
+	lw	t1,508(sp)
+	lw	t2,504(sp)
+	lw	t3,500(sp)
+	addi	sp,sp,520
+	jr	ra
+	.size	c,	.-c
+	.align	2
+	.globl	main
+	.type	main,	@function
+main:
+	addi	sp,sp,-520
+	sw	ra,516(sp)
+	sw	t0,512(sp)
+	sw	t1,508(sp)
+	sw	t2,504(sp)
+	sw	t3,500(sp)
+	addi	s0,sp,520
+.main_10:
+#10: call null, _global()
+	call	_global
+.main_11:
+#11: alloc a_main_S1, 2
+	li	t2,-64
+	sw	t2,-56(sp)
+.main_12:
+#12: store 0, a_main_S1, 0
+	li	t2,0
+	li	t1,0
+	lw	t4,-56(sp)
+	slli	t3,t1,2
+	add	t3,t4,t3
+	add	t3,sp,t3
+	sw	t2,0(t3)
+.main_13:
+#13: store 0, a_main_S1, 1
+	li	t2,0
+	li	t1,1
+	lw	t4,-56(sp)
+	slli	t3,t1,2
+	add	t3,t4,t3
+	add	t3,sp,t3
+	sw	t2,0(t3)
+.main_14:
+#14: def t0, 0
+	li	t2,0
+	sw	t2,-68(sp)
+.main_15:
+#15: mov t1, 0
+	li	t0,0
+	sw	t0,-72(sp)
+.main_16:
+#16: add t0, t0, t1
+	lw	t0,-68(sp)
+	lw	t1,-72(sp)
+	add	t2,t0,t1
+	sw	t2,-68(sp)
+.main_17:
+#17: store 4, a_main_S1, t0
+	li	t2,4
+	lw	t1,-68(sp)
+	lw	t4,-56(sp)
+	slli	t3,t1,2
+	add	t3,t4,t3
+	add	t3,sp,t3
+	sw	t2,0(t3)
+.main_18:
+#18: def t3, 0
+	li	t2,0
+	sw	t2,-76(sp)
+.main_19:
+#19: mov t4, 1
+	li	t0,1
+	sw	t0,-80(sp)
+.main_20:
+#20: add t3, t3, t4
+	lw	t0,-76(sp)
+	lw	t1,-80(sp)
+	add	t2,t0,t1
+	sw	t2,-76(sp)
+.main_21:
+#21: store 3, a_main_S1, t3
+	li	t2,3
+	lw	t1,-76(sp)
+	lw	t4,-56(sp)
+	slli	t3,t1,2
+	add	t3,t4,t3
+	add	t3,sp,t3
+	sw	t2,0(t3)
+.main_22:
+#22: def t6, 0
+	li	t2,0
+	sw	t2,-84(sp)
+.main_23:
+#23: call t6, c(a_main_S1)
+	lw	t3,-56(sp)
+	addi	a0,t3,520
+	call	c
+	sw	a0,-84(sp)
+.main_24:
+#24: def p_main_S1, t6
+	lw	t0,-84(sp)
+	sw	t0,-88(sp)
+.main_25:
+#25: def t7, 0
+	li	t2,0
+	sw	t2,-92(sp)
+.main_26:
+#26: mov t8, 0
+	li	t0,0
+	sw	t0,-96(sp)
+.main_27:
+#27: add t7, t7, t8
+	lw	t0,-92(sp)
+	lw	t1,-96(sp)
+	add	t2,t0,t1
+	sw	t2,-92(sp)
+.main_28:
+#28: load a_main_S1_elem, a_main_S1, t7
+	lw	t1,-92(sp)
+	lw	t4,-56(sp)
+	slli	t3,t1,2
+	add	t3,t4,t3
+	add	t3,sp,t3
+	lw	t2,0(t3)
+	sw	t2,-100(sp)
+.main_29:
+#29: return a_main_S1_elem
+	lw	a0,-100(sp)
+	j	main_return
+.main_30:
+main_return:
+	lw	ra,516(sp)
+	lw	t0,512(sp)
+	lw	t1,508(sp)
+	lw	t2,504(sp)
+	lw	t3,500(sp)
+	addi	sp,sp,520
+	jr	ra
+	.size	main,	.-main

@@ -653,16 +653,17 @@ void frontend::Analyzer::analysisAddExp(AddExp *root, vector<ir::Instruction *> 
         return;
     if (SZ) // 声明数组情况下
     {
+        root->t = Type::IntLiteral;
+        root->v = p0->v;
         for (int i = 2; i < SIZE; i += 2)
         {
-            root->t = Type::IntLiteral;
             GET_CHILD_PTR(p1, MulExp, i);
             GET_CHILD_PTR(fh, Term, i - 1);
             analysisMulExp(p1, buffer);
             if (fh->token.type == TokenType::PLUS)
-                root->v = std::to_string(stoi(p0->v) + stoi(p1->v));
+                root->v = std::to_string(stoi(root->v) + stoi(p1->v));
             else
-                root->v = std::to_string(stoi(p0->v) + stoi(p1->v));
+                root->v = std::to_string(stoi(root->v) - stoi(p1->v));
         }
         return;
     }
@@ -1561,7 +1562,16 @@ ir::Program frontend::Analyzer::get_ir_program(CompUnit *root)
         for (auto j : i.second.dimension)
             size = size * j;
         if (size == 1)
-            program.globalVal.push_back(ir::GlobalVal(i.second.operand));
+        {
+            if(isalpha(i.second.operand.name[0]) || i.second.operand.name[0] == '_')
+                program.globalVal.push_back(ir::GlobalVal(i.second.operand));
+            else
+            {
+                Operand temp = i.second.operand;
+                temp.name = i.first;
+                program.globalVal.push_back(ir::GlobalVal(temp));
+            }
+        }
         else
             program.globalVal.push_back(ir::GlobalVal(i.second.operand, size));
     }

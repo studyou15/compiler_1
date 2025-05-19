@@ -10,6 +10,7 @@
 #include<string>
 #include<vector>
 #include<fstream>
+#include<unordered_set>
 
 namespace backend {
 
@@ -38,11 +39,12 @@ struct Generator {
     std::ofstream& fout;                 // output file
     stackVarMap varMap;                 // 存储变量和栈内存偏移量的映射
     std::string current_func_name;      // 当前正在处理的函数名
+    std::unordered_set<std::string> global_vars;  // 用于存储全局变量名称
 
     Generator(ir::Program&, std::ofstream&);
 
     // reg allocate api
-    rv::rvREG getRd(ir::Operand);
+    rv::rvREG getRd(ir::Operand,bool p=0);
     rv::rvFREG fgetRd(ir::Operand);
     rv::rvREG getRs1(ir::Operand);
     rv::rvREG getRs2(ir::Operand);
@@ -64,21 +66,38 @@ struct Generator {
     void SubSolve(ir::Instruction*&);
     void MulSolve(ir::Instruction*&);
     void DivSolve(ir::Instruction*&);
+    void DefSolve(ir::Instruction*&);
+    void FDefSolve(ir::Instruction*&);
     void MovSolve(ir::Instruction*&);
     void LoadSolve(ir::Instruction*&);
     void StoreSolve(ir::Instruction*&);
     void ReturnSolve(ir::Instruction*&);
     void CallSolve(ir::Instruction*&);
+    void AllocSolve(ir::Instruction*&);
+    void RemSolve(ir::Instruction*&);
     // 浮点指令处理函数
     void FAddSolve(ir::Instruction*&);
     void FSubSolve(ir::Instruction*&);
     void FMulSolve(ir::Instruction*&);
     void FDivSolve(ir::Instruction*&);
     void FMovSolve(ir::Instruction*&);
-    
+    void OrSolve(ir::Instruction*&);
+    void AndSolve(ir::Instruction*&);
     // 类型转换指令
     void CvtI2FSolve(ir::Instruction*&);
     void CvtF2ISolve(ir::Instruction*&);
+
+    // 条件判断指令
+    void EqSolve(ir::Instruction*&);
+    void NeqSolve(ir::Instruction*&);
+    void SltSolve(ir::Instruction*&);
+    void SltXSolve(ir::Instruction*&);
+    void SeqzSolve(ir::Instruction*&);
+    // 跳转指令
+    void GotoSolve(ir::Instruction*&);
+    
+    // 全局变量初始化
+    void GlobalDefSolve(ir::Instruction*&);
 };
 
 
