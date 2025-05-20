@@ -76,13 +76,13 @@ void backend::Generator::funcSolve(const ir::Function &func)
 
     fout << "\taddi\tsp,sp,-" + std::to_string(frame_size) + "\n";
     fout << "\tsw\tra," + std::to_string(frame_size - 4) + "(sp)\n";
-    fout << "\tsw\ts0," + std::to_string(frame_size - 8) + "(sp)\n";
+    fout << "\tsw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
     fout << "\tsw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
     fout << "\tsw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
     fout << "\tsw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
-    // fout << "\tsw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
-    // fout << "\tsw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
-    // fout << "\tsw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
+    fout << "\tsw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
+    fout << "\tsw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
+    fout << "\tsw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
     fout << "\taddi\ts0,sp," + std::to_string(frame_size) + "\n";
     // this->sentences.push_back("\tfmv.w.x\tft0,zero");
 
@@ -102,13 +102,13 @@ void backend::Generator::funcSolve(const ir::Function &func)
 
     fout << func.name + "_return:\n";
     fout << "\tlw\tra," + std::to_string(frame_size - 4) + "(sp)\n";
-    fout << "\tlw\ts0," + std::to_string(frame_size - 8) + "(sp)\n";
+    fout << "\tlw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
     fout << "\tlw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
     fout << "\tlw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
     fout << "\tlw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
-    // fout << "\tlw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
-    // fout << "\tlw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
-    // fout << "\tlw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
+    fout << "\tlw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
+    fout << "\tlw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
+    fout << "\tlw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
     fout << "\taddi\tsp,sp," + std::to_string(frame_size) + "\n";
     fout << "\tjr\tra\n";
     fout << "\t.size\t" + func.name + ",\t.-" + func.name + "\n";
@@ -126,7 +126,7 @@ rv::rvREG backend::Generator::getRd(ir::Operand rd, bool p)
             if (des_offset != -1)
             {
                 // 本地变量，从栈中加载
-                fout << "\tlw\t" << rv::toString(rv::rvREG::X7) << "," << des_offset << "(s0)\n";
+                fout << "\tlw\t" << rv::toString(rv::rvREG::X7) << "," << des_offset << "(sp)\n";
             }
             else
             {
@@ -150,7 +150,7 @@ rv::rvREG backend::Generator::getRs1(ir::Operand rs1)
     if (op1_offset != -1)
     {
         // 本地变量，从栈中加载
-        fout << "\tlw\t" << rv::toString(rv::rvREG::X5) << "," << op1_offset << "(s0)\n";
+        fout << "\tlw\t" << rv::toString(rv::rvREG::X5) << "," << op1_offset << "(sp)\n";
     }
     else
     {
@@ -172,7 +172,7 @@ rv::rvREG backend::Generator::getRs2(ir::Operand rs2)
     if (op2_offset != -1)
     {
         // 本地变量，从栈中加载
-        fout << "\tlw\t" << rv::toString(rv::rvREG::X6) << "," << op2_offset << "(s0)\n";
+        fout << "\tlw\t" << rv::toString(rv::rvREG::X6) << "," << op2_offset << "(sp)\n";
     }
     else
     {
@@ -195,7 +195,7 @@ void backend::Generator::paramSolve(const std::vector<ir::Operand> &params)
         {
             int offset = varMap.find_operand(params[i]);
             // a0是X10，逐个对应后续的参数寄存器
-            fout << "\tsw\tx" << (10 + i) << "," << offset << "(s0)\n";
+            fout << "\tsw\tx" << (10 + i) << "," << offset << "(sp)\n";
         }
         // 超过8个的参数需要从调用者的栈帧中读取，这里简化处理
     }
@@ -323,7 +323,7 @@ void backend::Generator::SeqzSolve(ir::Instruction *&instr)
     }
 
     fout << "\tseqz\t" << rv::toString(rd) << "," << rv::toString(rs1) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::CallSolve(ir::Instruction *&instr)
@@ -351,14 +351,14 @@ void backend::Generator::CallSolve(ir::Instruction *&instr)
                 if (arg.type == ir::Type::IntPtr || arg.type == ir::Type::FloatPtr)
                 {
                     // 先加载数组基址偏移量
-                    fout << "\tlw\tt3," << arg_offset << "(s0)\n";
+                    fout << "\tlw\tt3," << arg_offset << "(sp)\n";
                     // 计算实际地址：sp + 数组基址偏移量
                     fout << "\taddi\ta" << i << ",t3,520\n";
                 }
                 else
                 {
                     // 普通变量，直接加载值
-                    fout << "\tlw\ta" << i << "," << arg_offset << "(s0)\n";
+                    fout << "\tlw\ta" << i << "," << arg_offset << "(sp)\n";
                 }
             }
             else
@@ -378,26 +378,26 @@ void backend::Generator::CallSolve(ir::Instruction *&instr)
         }
     }
 
-    // // 在调用函数前保存所有可能在调用中被修改的临时寄存器
-    // fout << "\tsw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
-    // fout << "\tsw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
-    // fout << "\tsw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
-    // fout << "\tsw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
-    // fout << "\tsw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
-    // fout << "\tsw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
-    // fout << "\tsw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
+    // 在调用函数前保存所有可能在调用中被修改的临时寄存器
+    fout << "\tsw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
+    fout << "\tsw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
+    fout << "\tsw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
+    fout << "\tsw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
+    fout << "\tsw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
+    fout << "\tsw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
+    fout << "\tsw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
 
     // 调用函数
     fout << "\tcall\t" + instr->op1.name + "\n";
 
-    // // 调用后恢复所有临时寄存器
-    // fout << "\tlw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
-    // fout << "\tlw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
-    // fout << "\tlw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
-    // fout << "\tlw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
-    // fout << "\tlw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
-    // fout << "\tlw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
-    // fout << "\tlw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
+    // 调用后恢复所有临时寄存器
+    fout << "\tlw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
+    fout << "\tlw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
+    fout << "\tlw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
+    fout << "\tlw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
+    fout << "\tlw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
+    fout << "\tlw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
+    fout << "\tlw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
 
     // 处理返回值
     if (instr->des.type != ir::Type::null)
@@ -410,7 +410,7 @@ void backend::Generator::CallSolve(ir::Instruction *&instr)
             des_offset = varMap.find_operand(instr->des);
         }
 
-        fout << "\tsw\ta0," << des_offset << "(s0)\n";
+        fout << "\tsw\ta0," << des_offset << "(sp)\n";
     }
 }
 
@@ -424,7 +424,7 @@ void backend::Generator::ReturnSolve(ir::Instruction *&instr)
 
             if (op1_offset != -1)
             {
-                fout << "\tlw\ta0," << op1_offset << "(s0)\n";
+                fout << "\tlw\ta0," << op1_offset << "(sp)\n";
             }
             else
             {
@@ -470,7 +470,7 @@ void backend::Generator::AddSolve(ir::Instruction *&instr)
     }
 
     fout << "\tadd\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::SubSolve(ir::Instruction *&instr)
@@ -502,7 +502,7 @@ void backend::Generator::SubSolve(ir::Instruction *&instr)
     }
 
     fout << "\tsub\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::MulSolve(ir::Instruction *&instr)
@@ -534,7 +534,7 @@ void backend::Generator::MulSolve(ir::Instruction *&instr)
     }
 
     fout << "\tmul\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::DivSolve(ir::Instruction *&instr)
@@ -566,7 +566,7 @@ void backend::Generator::DivSolve(ir::Instruction *&instr)
     }
 
     fout << "\tdiv\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::RemSolve(ir::Instruction *&instr)
@@ -597,7 +597,7 @@ void backend::Generator::RemSolve(ir::Instruction *&instr)
     }
 
     fout << "\trem\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::EqSolve(ir::Instruction *&instr)
@@ -630,7 +630,7 @@ void backend::Generator::EqSolve(ir::Instruction *&instr)
     }
     fout << "\tsub\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
     fout << "\tsltiu\t" << rv::toString(rd) << "," << rv::toString(rd) << "," << "1\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::NeqSolve(ir::Instruction *&instr)
@@ -663,7 +663,7 @@ void backend::Generator::NeqSolve(ir::Instruction *&instr)
     }
     fout << "\tsub\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
     fout << "\tsltu\t" << rv::toString(rd) << "," << "zero," << rv::toString(rd) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::SltSolve(ir::Instruction *&instr)
@@ -695,7 +695,7 @@ void backend::Generator::SltSolve(ir::Instruction *&instr)
     }
 
     fout << "\tslt\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::SltXSolve(ir::Instruction *&instr)
@@ -729,7 +729,7 @@ void backend::Generator::SltXSolve(ir::Instruction *&instr)
 
     fout << "\tslt\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
     fout << "\txori\t" << rv::toString(rd) << "," << rv::toString(rd) << "," << "1\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::AndSolve(ir::Instruction *&instr)
@@ -761,7 +761,7 @@ void backend::Generator::AndSolve(ir::Instruction *&instr)
     }
 
     fout << "\tand\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::OrSolve(ir::Instruction *&instr)
@@ -793,7 +793,7 @@ void backend::Generator::OrSolve(ir::Instruction *&instr)
     }
 
     fout << "\tor\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::MovSolve(ir::Instruction *&instr)
@@ -823,7 +823,7 @@ void backend::Generator::MovSolve(ir::Instruction *&instr)
     }
 
     // 存储结果到内存
-    fout << "\tsw\t" << rv::toString(rs1) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rs1) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::LoadSolve(ir::Instruction *&instr)
@@ -846,12 +846,12 @@ void backend::Generator::LoadSolve(ir::Instruction *&instr)
     if (array_var_offset != -1)
     {
         // 先读取数组基地址偏移量
-        fout << "\tlw\tt4," << array_var_offset << "(s0)\n";
+        fout << "\tlw\tt4," << array_var_offset << "(sp)\n";
         // 计算元素地址：基地址偏移量 + 索引*4
         fout << "\tslli\tt3," << rv::toString(rs2) << ",2\n";
         fout << "\tadd\tt3,t4,t3\n";
         // 加上sp得到最终地址
-        fout << "\tadd\tt3,s0,t3\n";
+        fout << "\tadd\tt3,sp,t3\n";
     }
     else
     {
@@ -865,7 +865,7 @@ void backend::Generator::LoadSolve(ir::Instruction *&instr)
     // 从计算出的地址加载值
     fout << "\tlw\t" << rv::toString(rd) << ",0(t3)\n";
     // 存储到目标变量
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::StoreSolve(ir::Instruction *&instr)
@@ -879,13 +879,13 @@ void backend::Generator::StoreSolve(ir::Instruction *&instr)
     if (array_var_offset != -1)
     {
         // 先读取数组基地址偏移量
-        fout << "\tlw\tt4," << array_var_offset << "(s0)\n";
+        fout << "\tlw\tt4," << array_var_offset << "(sp)\n";
         // 计算元素偏移：索引*4
         fout << "\tslli\tt3," << rv::toString(rs2) << ",2\n";
         // 计算最终偏移量：基地址偏移量 + 索引*4
         fout << "\tadd\tt3,t4,t3\n";
         // 加上sp得到最终地址
-        fout << "\tadd\tt3,s0,t3\n";
+        fout << "\tadd\tt3,sp,t3\n";
     }
     else
     {
@@ -942,7 +942,7 @@ void backend::Generator::DefSolve(ir::Instruction *&instr)
         rd = getRs1(instr->op1);
     }
 
-    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(sp)\n";
 }
 
 void backend::Generator::GlobalDefSolve(ir::Instruction *&instr)
@@ -978,7 +978,7 @@ void backend::Generator::AllocSolve(ir::Instruction *&instr)
 
         // 将数组基地址偏移量存入变量位置
         fout << "\tli\tt2," << array_elements_offset << "\n";
-        fout << "\tsw\tt2," << array_base_offset << "(s0)\n";
+        fout << "\tsw\tt2," << array_base_offset << "(sp)\n";
     }
 }
 

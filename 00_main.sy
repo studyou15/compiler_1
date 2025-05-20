@@ -1,11 +1,10 @@
-int c(int s[])
-{
-  s[0] = 1;
-  return s[1];
-}
-int main(){
-    int a[2];
-    a[0]=4;a[1]=3;
-    int p = c(a);
-    return a[0];
+// Use complex expression in assign structure
+int main () {
+    int a;
+    int result;
+    a = 5;
+    result = 1;
+    putint(result);
+    result = a;
+    return a;
 }
