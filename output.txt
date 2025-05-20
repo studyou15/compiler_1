@@ -1,21 +1,109 @@
-void _global()
-	0: alloc get, 100
-	1: return null
-end
-
-void getstr(int* get_getstr_S1)
-	0: def t0, 0
-	1: mov t1, 0
-	2: add t0, t0, t1
-	3: store 1, get_getstr_S1, t0
-	4: return null
-end
-
-int main()
-	0: call null, _global()
-	1: call t0, getstr(get)
-	2: return 0
-end
-
-GVT:
-	get int* 100
+	.option nopic
+	.data
+get:
+	.space	400
+	.text
+	.align	2
+	.globl	_global
+	.type	_global,	@function
+_global:
+	addi	sp,sp,-1560
+	sw	ra,1556(sp)
+	sw	s0,1552(sp)
+	sw	t1,1548(sp)
+	sw	t2,1544(sp)
+	sw	t3,1540(sp)
+	addi	s0,sp,1560
+._global_0:
+#0: alloc get, 100
+._global_1:
+#1: return null
+	j	_global_return
+._global_2:
+_global_return:
+	lw	ra,1556(sp)
+	lw	s0,1552(sp)
+	lw	t1,1548(sp)
+	lw	t2,1544(sp)
+	lw	t3,1540(sp)
+	addi	sp,sp,1560
+	jr	ra
+	.size	_global,	.-_global
+	.align	2
+	.globl	getstr
+	.type	getstr,	@function
+getstr:
+	addi	sp,sp,-1560
+	sw	ra,1556(sp)
+	sw	s0,1552(sp)
+	sw	t1,1548(sp)
+	sw	t2,1544(sp)
+	sw	t3,1540(sp)
+	addi	s0,sp,1560
+.getstr_2:
+#2: def t0, 0
+	li	t2,0
+	sw	t2,-56(s0)
+.getstr_3:
+#3: mov t1, 0
+	li	t0,0
+	sw	t0,-60(s0)
+.getstr_4:
+#4: add t0, t0, t1
+	lw	t0,-56(s0)
+	lw	t1,-60(s0)
+	add	t2,t0,t1
+	sw	t2,-56(s0)
+.getstr_5:
+#5: store 1, get, t0
+	li	t2,1
+	lw	t1,-56(s0)
+	la	t0,get
+	slli	t3,t1,2
+	add	t3,t0,t3
+	sw	t2,0(t3)
+.getstr_6:
+#6: return null
+	j	getstr_return
+.getstr_7:
+getstr_return:
+	lw	ra,1556(sp)
+	lw	s0,1552(sp)
+	lw	t1,1548(sp)
+	lw	t2,1544(sp)
+	lw	t3,1540(sp)
+	addi	sp,sp,1560
+	jr	ra
+	.size	getstr,	.-getstr
+	.align	2
+	.globl	main
+	.type	main,	@function
+main:
+	addi	sp,sp,-1560
+	sw	ra,1556(sp)
+	sw	s0,1552(sp)
+	sw	t1,1548(sp)
+	sw	t2,1544(sp)
+	sw	t3,1540(sp)
+	addi	s0,sp,1560
+.main_7:
+#7: call null, _global()
+	call	_global
+.main_8:
+#8: call t0, getstr(get)
+	la	a0,get
+	call	getstr
+.main_9:
+#9: return 0
+	li	a0,0
+	j	main_return
+.main_10:
+main_return:
+	lw	ra,1556(sp)
+	lw	s0,1552(sp)
+	lw	t1,1548(sp)
+	lw	t2,1544(sp)
+	lw	t3,1540(sp)
+	addi	sp,sp,1560
+	jr	ra
+	.size	main,	.-main

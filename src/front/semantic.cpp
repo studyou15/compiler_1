@@ -180,8 +180,8 @@ void frontend::Analyzer::analysisFuncFParam(FuncFParam *root, ir::Function *&fun
         GET_CHILD_PTR(exp, Exp, i);
         analysisExp(exp, func->InstVec);
     }
-    parameter.push_back(Operand(symbol_table.get_scoped_name(p1->token.value), p0->t));
-    symbol_table.scope_stack.back().table[p1->token.value] = {Operand(symbol_table.get_scoped_name(p1->token.value), p0->t)};
+    parameter.push_back(Operand(p1->token.value, p0->t));
+    symbol_table.scope_stack.back().table[p1->token.value] = {Operand(p1->token.value, p0->t)};
     return;
 }
 
