@@ -4,7 +4,7 @@
 
 #define TODO assert(0 && "todo")
 
-int frame_size = 520;
+int frame_size = 1560;
 int Instr_ID = 0;
 
 backend::Generator::Generator(ir::Program &p, std::ofstream &f) : program(p), fout(f), global_vars() {}
@@ -186,16 +186,24 @@ void backend::Generator::paramSolve(const std::vector<ir::Operand> &params)
     // 处理函数参数
     for (size_t i = 0; i < params.size(); i++)
     {
+        if (params[i].type == ir::Type::IntPtr && global_vars.find(params[i].name) != global_vars.end())
+        {
+            continue;
+        }
         // 将参数添加到变量映射表，假设每个参数占用4字节
         varMap.add_operand(params[i], 4);
-
+        int offset = varMap.find_operand(params[i]);
         // 如果参数少于8个，则从a0-a7寄存器加载到内存
         // RISC-V调用约定中，前8个参数通过a0-a7寄存器传递
         if (i < 8)
         {
-            int offset = varMap.find_operand(params[i]);
             // a0是X10，逐个对应后续的参数寄存器
             fout << "\tsw\tx" << (10 + i) << "," << offset << "(s0)\n";
+        }
+        else
+        {
+            fout << "\tlw\tt0" << "," << i * 4 - 32 << "(s0)\n";
+            fout << "\tsw\tt0" << "," << offset << "(s0)\n";
         }
         // 超过8个的参数需要从调用者的栈帧中读取，这里简化处理
     }
@@ -332,72 +340,62 @@ void backend::Generator::CallSolve(ir::Instruction *&instr)
     const auto &arguments = callInst.argumentList;
 
     // 处理参数传递：RISC-V调用约定前8个参数通过a0-a7寄存器传递
-    for (size_t i = 0; i < arguments.size() && i < 8; ++i)
+    for (size_t i = 0; i < arguments.size(); ++i)
     {
         const auto &arg = arguments[i];
 
-        if (arg.type == ir::Type::IntLiteral)
+        if (i < 8)
         {
-            // 整数字面量直接加载到参数寄存器
-            fout << "\tli\ta" << i << "," << arg.name << "\n";
-        }
-        else
-        {
-            // 查找参数在当前栈帧中的偏移量
-            int arg_offset = varMap.find_operand(arg);
-            if (arg_offset != -1)
+            if (arg.type == ir::Type::IntLiteral)
             {
-                // 对于数组参数，要计算并传递实际地址，而不只是偏移量
-                if (arg.type == ir::Type::IntPtr || arg.type == ir::Type::FloatPtr)
-                {
-                    // 先加载数组基址偏移量
-                    fout << "\tlw\tt3," << arg_offset << "(s0)\n";
-                    // 计算实际地址：sp + 数组基址偏移量
-                    fout << "\taddi\ta" << i << ",t3,520\n";
-                }
-                else
-                {
-                    // 普通变量，直接加载值
-                    fout << "\tlw\ta" << i << "," << arg_offset << "(s0)\n";
-                }
+                // 整数字面量直接加载到参数寄存器
+                fout << "\tli\ta" << i << "," << arg.name << "\n";
             }
             else
             {
-                // 全局变量
-                if (arg.type == ir::Type::IntPtr || arg.type == ir::Type::FloatPtr)
+                // 查找参数在当前栈帧中的偏移量
+                int arg_offset = varMap.find_operand(arg);
+                if (arg_offset != -1)
                 {
-                    // 对于全局数组，直接加载地址
-                    fout << "\tla\ta" << i << "," << arg.name << "\n";
+                    // 对于数组参数，要计算并传递实际地址，而不只是偏移量
+                    if (arg.type == ir::Type::IntPtr || arg.type == ir::Type::FloatPtr)
+                    {
+                        // 先加载数组基址偏移量
+                        fout << "\tlw\tt3," << arg_offset << "(s0)\n";
+                        // 计算实际地址：sp + 数组基址偏移量
+                        fout << "\taddi\ta" << i << ",t3," << frame_size << "\n";
+                    }
+                    else
+                    {
+                        // 普通变量，直接加载值
+                        fout << "\tlw\ta" << i << "," << arg_offset << "(s0)\n";
+                    }
                 }
                 else
                 {
-                    // 对于全局普通变量，加载其值
-                    fout << "\tlw\ta" << i << "," << arg.name << "\n";
+                    // 全局变量
+                    if (arg.type == ir::Type::IntPtr || arg.type == ir::Type::FloatPtr)
+                    {
+                        // 对于全局数组，直接加载地址
+                        fout << "\tla\ta" << i << "," << arg.name << "\n";
+                    }
+                    else
+                    {
+                        // 对于全局普通变量，加载其值
+                        fout << "\tlw\ta" << i << "," << arg.name << "\n";
+                    }
                 }
             }
         }
+        else
+        {
+            rv::rvREG rs1 = getRs1(arguments[i]);
+            fout << "\tsw\t" << rv::toString(rs1) << "," << 4 * i - 32 << "(sp)\n";
+        }
     }
-
-    // // 在调用函数前保存所有可能在调用中被修改的临时寄存器
-    // fout << "\tsw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
-    // fout << "\tsw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
-    // fout << "\tsw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
-    // fout << "\tsw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
-    // fout << "\tsw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
-    // fout << "\tsw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
-    // fout << "\tsw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
 
     // 调用函数
     fout << "\tcall\t" + instr->op1.name + "\n";
-
-    // // 调用后恢复所有临时寄存器
-    // fout << "\tlw\tt0," + std::to_string(frame_size - 8) + "(sp)\n";
-    // fout << "\tlw\tt1," + std::to_string(frame_size - 12) + "(sp)\n";
-    // fout << "\tlw\tt2," + std::to_string(frame_size - 16) + "(sp)\n";
-    // fout << "\tlw\tt3," + std::to_string(frame_size - 20) + "(sp)\n";
-    // fout << "\tlw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
-    // fout << "\tlw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
-    // fout << "\tlw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
 
     // 处理返回值
     if (instr->des.type != ir::Type::null)
@@ -747,19 +745,16 @@ void backend::Generator::AndSolve(ir::Instruction *&instr)
         if (global_vars.find(instr->des.name) != global_vars.end())
         {
             // 是全局变量，生成存储到全局变量的代码
+            fout << "\tsnez\t" << rv::toString(rs1) << "," << rv::toString(rs1) << "\n";
+            fout << "\tsnez\t" << rv::toString(rs2) << "," << rv::toString(rs2) << "\n";
             fout << "\tand\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
             fout << "\tla\ts3," << instr->des.name << "\n";
             fout << "\tsw\t" << rv::toString(rd) << ",0(s3)\n";
             return;
         }
-        else
-        {
-            // 是局部变量，添加到变量表
-            varMap.add_operand(instr->des);
-            des_offset = varMap.find_operand(instr->des);
-        }
     }
-
+    fout << "\tsnez\t" << rv::toString(rs1) << "," << rv::toString(rs1) << "\n";
+    fout << "\tsnez\t" << rv::toString(rs2) << "," << rv::toString(rs2) << "\n";
     fout << "\tand\t" << rv::toString(rd) << "," << rv::toString(rs1) << "," << rv::toString(rs2) << "\n";
     fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
 }
@@ -783,12 +778,6 @@ void backend::Generator::OrSolve(ir::Instruction *&instr)
             fout << "\tla\ts3," << instr->des.name << "\n";
             fout << "\tsw\t" << rv::toString(rd) << ",0(s3)\n";
             return;
-        }
-        else
-        {
-            // 是局部变量，添加到变量表
-            varMap.add_operand(instr->des);
-            des_offset = varMap.find_operand(instr->des);
         }
     }
 
@@ -950,7 +939,13 @@ void backend::Generator::GlobalDefSolve(ir::Instruction *&instr)
     // 解析出全局变量名（去掉_global后缀）
     std::string global_var_name = instr->des.name;
 
-    fout << "\tli\ts2," << instr->op1.name << "\n";
+    if (instr->op1.type == ir::Type::IntLiteral)
+        fout << "\tli\ts2," << instr->op1.name << "\n";
+    else
+    {
+        int des_offset = varMap.find_operand(instr->op1);
+        fout << "\tlw\ts2," << des_offset << "(s0)\n";
+    }
     fout << "\tmv\ts1,s2\n";
     fout << "\tla\ts3," << global_var_name << "\n";
     fout << "\tsw\ts1,0(s3)\n";
@@ -974,7 +969,7 @@ void backend::Generator::AllocSolve(ir::Instruction *&instr)
 
         // 为数组元素分配空间
         int array_elements_offset = varMap.offset - (array_size * 4) + 4; // 当前偏移量减4作为数组起始位置
-        varMap.offset -= (array_size * 4);             // 为数组元素预留空间
+        varMap.offset -= (array_size * 4);                                // 为数组元素预留空间
 
         // 将数组基地址偏移量存入变量位置
         fout << "\tli\tt2," << array_elements_offset << "\n";

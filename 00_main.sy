@@ -1,10 +1,16 @@
-// Use complex expression in assign structure
-int main () {
-    int a;
-    int result;
-    a = 5;
-    result = 1;
-    putint(result);
-    result = a;
-    return a;
+int get[100];
+
+void getstr(int get[]) {
+ 
+    get[0] = 1;
+
+    return;
+}
+
+int main()
+{
+
+    getstr(get);
+ 
+    return 0;
 }

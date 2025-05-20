@@ -1,91 +1,21 @@
-	.option nopic
-	.data
-	.text
-	.align	2
-	.globl	_global
-	.type	_global,	@function
-_global:
-	addi	sp,sp,-520
-	sw	ra,516(sp)
-	sw	s0,512(sp)
-	sw	t1,508(sp)
-	sw	t2,504(sp)
-	sw	t3,500(sp)
-	sw	t4,496(sp)
-	sw	t5,492(sp)
-	sw	t6,488(sp)
-	addi	s0,sp,520
-._global_0:
-#0: return null
-	j	_global_return
-._global_1:
-_global_return:
-	lw	ra,516(sp)
-	lw	s0,512(sp)
-	lw	t1,508(sp)
-	lw	t2,504(sp)
-	lw	t3,500(sp)
-	lw	t4,496(sp)
-	lw	t5,492(sp)
-	lw	t6,488(sp)
-	addi	sp,sp,520
-	jr	ra
-	.size	_global,	.-_global
-	.align	2
-	.globl	main
-	.type	main,	@function
-main:
-	addi	sp,sp,-520
-	sw	ra,516(sp)
-	sw	s0,512(sp)
-	sw	t1,508(sp)
-	sw	t2,504(sp)
-	sw	t3,500(sp)
-	sw	t4,496(sp)
-	sw	t5,492(sp)
-	sw	t6,488(sp)
-	addi	s0,sp,520
-.main_1:
-#1: call null, _global()
-	call	_global
-.main_2:
-#2: def a_main_S1, 0
-	li	t2,0
-	sw	t2,-56(s0)
-.main_3:
-#3: def result_main_S1, 0
-	li	t2,0
-	sw	t2,-60(s0)
-.main_4:
-#4: mov a_main_S1, 5
-	li	t0,5
-	sw	t0,-56(s0)
-.main_5:
-#5: mov result_main_S1, 1
-	li	t0,1
-	sw	t0,-60(s0)
-.main_6:
-#6: call t2, putint(result_main_S1)
-	lw	a0,-60(s0)
-	call	putint
-.main_7:
-#7: mov result_main_S1, a_main_S1
-	lw	t0,-56(s0)
-	sw	t0,-60(s0)
-.main_8:
-#8: return a_main_S1
-	lw	a0,-56(s0)
-	j	main_return
-.main_9:
-main_return:
-	lw	ra,516(sp)
-	lw	s0,512(sp)
-	lw	t1,508(sp)
-	lw	t2,504(sp)
-	lw	t3,500(sp)
-	lw	t4,496(sp)
-	lw	t5,492(sp)
-	lw	t6,488(sp)
-	addi	sp,sp,520
-	jr	ra
-	.size	main,	.-main
+void _global()
+	0: alloc get, 100
+	1: return null
+end
+
+void getstr(int* get_getstr_S1)
+	0: def t0, 0
+	1: mov t1, 0
+	2: add t0, t0, t1
+	3: store 1, get_getstr_S1, t0
+	4: return null
+end
+
+int main()
+	0: call null, _global()
+	1: call t0, getstr(get)
+	2: return 0
+end
+
+GVT:
+	get int* 100

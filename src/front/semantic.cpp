@@ -1387,14 +1387,14 @@ void frontend::Analyzer::analysisVarDef(VarDef *root, ir::Type type, vector<ir::
         int j = 0;
         if (SIZE - 1 != i)
         {
-            for (; j < Len; j++)
-            {
-                buffer.push_back(new ir::Instruction(
-                    ste.operand,
-                    {std::to_string(j), Type::IntLiteral},
-                    {"0", Type::IntLiteral},
-                    Operator::store));
-            }
+            // for (; j < Len; j++)
+            // {
+            //     buffer.push_back(new ir::Instruction(
+            //         ste.operand,
+            //         {std::to_string(j), Type::IntLiteral},
+            //         {"0", Type::IntLiteral},
+            //         Operator::store));
+            // }
             return;
         }
         GET_CHILD_PTR(p2, InitVal, i);
@@ -1407,7 +1407,7 @@ void frontend::Analyzer::analysisVarDef(VarDef *root, ir::Type type, vector<ir::
                 p2->vecV[j],
                 Operator::store));
         }
-        for (; j < Len; j++)
+        for (; j < Len && namespa != "global"; j++)
         {
             if (type == Type::Int)
                 buffer.push_back(new ir::Instruction(
