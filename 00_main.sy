@@ -1,16 +1,8 @@
-int get[100];
 
-void getstr(int get[]) {
- 
-    get[0] = 1;
 
-    return;
-}
+int main() {
 
-int main()
-{
-
-    getstr(get);
- 
-    return 0;
+  float arr[2] = {1, 2};
+  putfloat(arr[0]);
+  return 0;
 }

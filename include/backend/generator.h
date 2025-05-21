@@ -40,12 +40,14 @@ struct Generator {
     stackVarMap varMap;                 // 存储变量和栈内存偏移量的映射
     std::string current_func_name;      // 当前正在处理的函数名
     std::unordered_set<std::string> global_vars;  // 用于存储全局变量名称
+    std::unordered_map<std::string, std::string> float_constants; // 用于存储浮点常量到标签的映射
+    int float_counter = 0;              // 浮点常量计数器
 
     Generator(ir::Program&, std::ofstream&);
 
     // reg allocate api
     rv::rvREG getRd(ir::Operand,bool p=0);
-    rv::rvFREG fgetRd(ir::Operand);
+    rv::rvFREG fgetRd(ir::Operand,bool p=0);
     rv::rvREG getRs1(ir::Operand);
     rv::rvREG getRs2(ir::Operand);
     rv::rvFREG fgetRs1(ir::Operand);
@@ -81,23 +83,29 @@ struct Generator {
     void FMulSolve(ir::Instruction*&);
     void FDivSolve(ir::Instruction*&);
     void FMovSolve(ir::Instruction*&);
-    void OrSolve(ir::Instruction*&);
-    void AndSolve(ir::Instruction*&);
+    void FGlobalDefSolve(ir::Instruction*&);
+
     // 类型转换指令
     void CvtI2FSolve(ir::Instruction*&);
     void CvtF2ISolve(ir::Instruction*&);
 
     // 条件判断指令
+    void OrSolve(ir::Instruction*&);
+    void AndSolve(ir::Instruction*&);
     void EqSolve(ir::Instruction*&);
     void NeqSolve(ir::Instruction*&);
     void SltSolve(ir::Instruction*&);
     void SltXSolve(ir::Instruction*&);
     void SeqzSolve(ir::Instruction*&);
+    void FLssSolve(ir::Instruction*&);
     // 跳转指令
     void GotoSolve(ir::Instruction*&);
     
     // 全局变量初始化
     void GlobalDefSolve(ir::Instruction*&);
+    
+    // 浮点常量处理
+    std::string getFloatConstantLabel(const std::string& value);
 };
 
 

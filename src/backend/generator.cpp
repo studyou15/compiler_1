@@ -9,6 +9,21 @@ int Instr_ID = 0;
 
 backend::Generator::Generator(ir::Program &p, std::ofstream &f) : program(p), fout(f), global_vars() {}
 
+// 实现获取浮点常量标签的方法
+std::string backend::Generator::getFloatConstantLabel(const std::string &value)
+{
+    // 检查该浮点常量是否已经有标签
+    if (float_constants.find(value) != float_constants.end())
+    {
+        return float_constants[value];
+    }
+
+    // 为新的浮点常量创建标签
+    std::string label = "Floatnum" + std::to_string(float_counter++);
+    float_constants[value] = label;
+    return label;
+}
+
 int backend::stackVarMap::find_operand(ir::Operand root)
 {
     if (_table.find(root.name) == _table.end())
@@ -31,6 +46,51 @@ void backend::Generator::gen()
     fout << "\t.option nopic\n";
     fout << "\t.data\n";
 
+    // 先扫描整个程序收集所有浮点常量
+    // 这需要遍历所有函数的所有指令
+    for (auto &func : program.functions)
+    {
+        if (func.name == "_global")
+            continue;
+        for (auto &instr : func.InstVec)
+        {
+            // 检查指令中的操作数是否包含浮点常量
+            if (instr->op1.type == ir::Type::FloatLiteral)
+            {
+                getFloatConstantLabel(instr->op1.name);
+            }
+            if (instr->op2.type == ir::Type::FloatLiteral)
+            {
+                getFloatConstantLabel(instr->op2.name);
+            }
+            if (instr->des.type == ir::Type::FloatLiteral)
+            {
+                getFloatConstantLabel(instr->des.name);
+            }
+
+            // 检查指令中是否有函数调用
+            if (instr->op == ir::Operator::call)
+            {
+                const auto &callInst = dynamic_cast<const ir::CallInst &>(*instr);
+                // 检查函数参数中是否有浮点常量
+                for (const auto &arg : callInst.argumentList)
+                {
+                    if (arg.type == ir::Type::FloatLiteral)
+                    {
+                        getFloatConstantLabel(arg.name);
+                    }
+                }
+            }
+        }
+    }
+
+    // 输出所有收集到的浮点常量
+    for (const auto &pair : float_constants)
+    {
+        fout << pair.second << ":\n";
+        fout << "\t.float " << pair.first << "\n";
+    }
+
     GlobalInit(program.globalVal);
     fout << "\t.text\n";
 
@@ -44,6 +104,8 @@ void backend::Generator::GlobalInit(const std::vector<ir::GlobalVal> &global)
 {
     for (auto it : global)
     {
+        if (it.val.type == ir::Type::FloatLiteral)
+            continue;
         // 将全局变量添加到全局变量集合中
         global_vars.insert(it.val.name);
 
@@ -83,6 +145,7 @@ void backend::Generator::funcSolve(const ir::Function &func)
     // fout << "\tsw\tt4," + std::to_string(frame_size - 24) + "(sp)\n";
     // fout << "\tsw\tt5," + std::to_string(frame_size - 28) + "(sp)\n";
     // fout << "\tsw\tt6," + std::to_string(frame_size - 32) + "(sp)\n";
+    fout << "\tfmv.w.x\tft0,zero\n";
     fout << "\taddi\ts0,sp," + std::to_string(frame_size) + "\n";
     // this->sentences.push_back("\tfmv.w.x\tft0,zero");
 
@@ -140,7 +203,7 @@ rv::rvREG backend::Generator::getRd(ir::Operand rd, bool p)
 rv::rvREG backend::Generator::getRs1(ir::Operand rs1)
 {
     // 对于字面量，直接加载到寄存器
-    if (rs1.type == ir::Type::IntLiteral)
+    if (rs1.type == ir::Type::IntLiteral || (rs1.name[0]>='0'&&rs1.name[0]<='9'))
     {
         fout << "\tli\t" << rv::toString(rv::rvREG::X5) << "," << rs1.name << "\n";
         return rv::rvREG::X5; // t0
@@ -181,6 +244,73 @@ rv::rvREG backend::Generator::getRs2(ir::Operand rs2)
     return rv::rvREG::X6; // t1
 }
 
+rv::rvFREG backend::Generator::fgetRd(ir::Operand rd, bool p)
+{
+    if (p)
+    {
+        if(rd.type == ir::Type::FloatLiteral)
+        {
+            std::string label = getFloatConstantLabel(rd.name);
+            fout << "\tla\t" << "t4," << label << "\n";
+            fout << "\tflw\t" << rv::toString(rv::rvFREG::F7) << ",0(t4)" << "\n";
+        }
+        else
+        {
+            int des_offset = varMap.find_operand(rd);
+            fout << "\tflw\t" << rv::toString(rv::rvFREG::F7) << "," << des_offset << "(s0)\n";
+        }
+    }
+    return rv::rvFREG::F7; // ft7
+}
+
+rv::rvFREG backend::Generator::fgetRs1(ir::Operand rs1)
+{
+    // 对于字面量，加载对应的标签
+    if (rs1.type == ir::Type::FloatLiteral)
+    {
+        std::string label = getFloatConstantLabel(rs1.name);
+        fout << "\tla\t" << "t4," << label << "\n";
+        fout << "\tflw\t" << rv::toString(rv::rvFREG::F5) << ",0(t4)" << "\n";
+        return rv::rvFREG::F5; // ft5
+    }
+
+    int op1_offset = varMap.find_operand(rs1);
+    if (op1_offset != -1)
+    {
+        // 本地变量，从栈中加载
+        fout << "\tflw\t" << rv::toString(rv::rvFREG::F5) << "," << op1_offset << "(s0)\n";
+    }
+    else
+    {
+        fout << "\tflw\t" << rv::toString(rv::rvFREG::F5) << "," << rs1.name << "\n";
+    }
+    return rv::rvFREG::F5; // ft5
+}
+
+rv::rvFREG backend::Generator::fgetRs2(ir::Operand rs2)
+{
+    // 对于字面量，直接加载到浮点寄存器
+    if (rs2.type == ir::Type::FloatLiteral)
+    {
+        std::string label = getFloatConstantLabel(rs2.name);
+        fout << "\tla\t" << "t4," << label << "\n";
+        fout << "\tflw\t" << rv::toString(rv::rvFREG::F6) << ",0(t4)" << "\n";
+        return rv::rvFREG::F6; // ft6
+    }
+
+    int op2_offset = varMap.find_operand(rs2);
+    if (op2_offset != -1)
+    {
+        // 本地变量，从栈中加载
+        fout << "\tflw\t" << rv::toString(rv::rvFREG::F6) << "," << op2_offset << "(s0)\n";
+    }
+    else
+    {
+        fout << "\tflw\t" << rv::toString(rv::rvFREG::F6) << "," << rs2.name << "\n";
+    }
+    return rv::rvFREG::F6; // ft6
+}
+
 void backend::Generator::paramSolve(const std::vector<ir::Operand> &params)
 {
     // 处理函数参数
@@ -197,8 +327,15 @@ void backend::Generator::paramSolve(const std::vector<ir::Operand> &params)
         // RISC-V调用约定中，前8个参数通过a0-a7寄存器传递
         if (i < 8)
         {
+            if (params[i].type == ir::Type::Float)
+            {
+                fout << "\tfsw\tfa" << i << "," << offset << "(s0)\n";
+            }
             // a0是X10，逐个对应后续的参数寄存器
-            fout << "\tsw\tx" << (10 + i) << "," << offset << "(s0)\n";
+            else
+            {
+                fout << "\tsw\ta" << i << "," << offset << "(s0)\n";
+            }
         }
         else
         {
@@ -211,6 +348,11 @@ void backend::Generator::paramSolve(const std::vector<ir::Operand> &params)
 
 void backend::Generator::InstrSolve(ir::Instruction *&instr)
 {
+    if (current_func_name == "_global")
+    {
+        if (instr->op == ir::Operator::fmov || instr->op == ir::Operator::fdef || instr->op == ir::Operator::fmul || instr->op == ir::Operator::fsub)
+            return;
+    }
     switch (instr->op)
     {
     case ::ir::Operator::alloc:
@@ -297,6 +439,33 @@ void backend::Generator::InstrSolve(ir::Instruction *&instr)
     case ir::Operator::_not:
         SeqzSolve(instr);
         break;
+    case ir::Operator::fadd:
+        FAddSolve(instr);
+        break;
+    case ir::Operator::fsub:
+        FSubSolve(instr);
+        break;
+    case ir::Operator::fmul:
+        FMulSolve(instr);
+        break;
+    case ir::Operator::fdiv:
+        FDivSolve(instr);
+        break;
+    case ir::Operator::fmov:
+        FMovSolve(instr);
+        break;
+    case ir::Operator::cvt_i2f:
+        CvtI2FSolve(instr);
+        break;
+    case ir::Operator::cvt_f2i:
+        CvtF2ISolve(instr);
+        break;
+    case ir::Operator::flss:
+        FLssSolve(instr);
+        break;
+    case ir::Operator::fdef:
+        FDefSolve(instr);
+        break;
     default:
         // 未实现的指令，输出警告
         fout << "\t# 未实现的指令: " << toString(instr->op) << "\n";
@@ -344,6 +513,26 @@ void backend::Generator::CallSolve(ir::Instruction *&instr)
     {
         const auto &arg = arguments[i];
 
+        int arg_offset = varMap.find_operand(arg);
+
+        if (arg.type == ir::Type::FloatLiteral)
+        {
+            std::string label = getFloatConstantLabel(arg.name);
+            fout << "\tla\t" << "t4," << label << "\n";
+            fout << "\tflw\tfa" << i << ",0(t4)" << "\n";
+            continue;
+        }
+        else if (arg.type == ir::Type::Float)
+        {
+            fout << "\tflw\tfa" << i << "," << arg_offset << "(s0)\n";
+            continue;
+        }
+        else if(arg.type == ir::Type::FloatPtr)
+        {
+            fout << "\tlw\tt4," << arg_offset << "(s0)\n";
+            fout << "\tadd\ta"<<i<<",t4,s0\n";
+            continue;
+        }
         if (i < 8)
         {
             if (arg.type == ir::Type::IntLiteral)
@@ -354,7 +543,6 @@ void backend::Generator::CallSolve(ir::Instruction *&instr)
             else
             {
                 // 查找参数在当前栈帧中的偏移量
-                int arg_offset = varMap.find_operand(arg);
                 if (arg_offset != -1)
                 {
                     // 对于数组参数，要计算并传递实际地址，而不只是偏移量
@@ -407,8 +595,10 @@ void backend::Generator::CallSolve(ir::Instruction *&instr)
             varMap.add_operand(instr->des);
             des_offset = varMap.find_operand(instr->des);
         }
-
-        fout << "\tsw\ta0," << des_offset << "(s0)\n";
+        if (instr->des.type == ir::Type::Int)
+            fout << "\tsw\ta0," << des_offset << "(s0)\n";
+        else
+            fout << "\tfsw\tfa0," << des_offset << "(s0)\n";
     }
 }
 
@@ -416,10 +606,10 @@ void backend::Generator::ReturnSolve(ir::Instruction *&instr)
 {
     if (instr->op1.type != ir::Type::null)
     {
+        int op1_offset = varMap.find_operand(instr->op1);
+
         if (instr->op1.type == ir::Type::Int)
         {
-            int op1_offset = varMap.find_operand(instr->op1);
-
             if (op1_offset != -1)
             {
                 fout << "\tlw\ta0," << op1_offset << "(s0)\n";
@@ -433,6 +623,8 @@ void backend::Generator::ReturnSolve(ir::Instruction *&instr)
         {
             fout << "\tli\ta0," << instr->op1.name << "\n";
         }
+        else
+            fout << "\tflw\tfa0," << op1_offset << "(s0)\n";
     }
 
     // 跳转到函数返回处理
@@ -600,6 +792,8 @@ void backend::Generator::RemSolve(ir::Instruction *&instr)
 
 void backend::Generator::EqSolve(ir::Instruction *&instr)
 {
+    if (instr->op1.type == ir::Type::FloatLiteral || instr->op2.type == ir::Type::FloatLiteral || instr->op1.type == ir::Type::Float)
+        return;
     rv::rvREG rd, rs1, rs2;
     rd = getRd(instr->des);
     rs1 = getRs1(instr->op1);
@@ -859,33 +1053,61 @@ void backend::Generator::LoadSolve(ir::Instruction *&instr)
 
 void backend::Generator::StoreSolve(ir::Instruction *&instr)
 {
-    rv::rvREG rd, rs2;
-    rd = getRd(instr->des, true); // 要存储的值
-    rs2 = getRs2(instr->op2);     // 这是计算后的线性索引
-
-    // 获取数组变量偏移量
-    int array_var_offset = varMap.find_operand(instr->op1);
-    if (array_var_offset != -1)
+    if (instr->des.type != ir::Type::Float && instr->des.type != ir::Type::FloatLiteral)
     {
-        // 先读取数组基地址偏移量
-        fout << "\tlw\tt4," << array_var_offset << "(s0)\n";
-        // 计算元素偏移：索引*4
-        fout << "\tslli\tt3," << rv::toString(rs2) << ",2\n";
-        // 计算最终偏移量：基地址偏移量 + 索引*4
-        fout << "\tadd\tt3,t4,t3\n";
-        // 加上sp得到最终地址
-        fout << "\tadd\tt3,s0,t3\n";
+        rv::rvREG rd, rs2;
+        rd = getRd(instr->des, true); // 要存储的值
+        rs2 = getRs2(instr->op2);     // 这是计算后的线性索引
+
+        // 获取数组变量偏移量
+        int array_var_offset = varMap.find_operand(instr->op1);
+        if (array_var_offset != -1)
+        {
+            // 先读取数组基地址偏移量
+            fout << "\tlw\tt4," << array_var_offset << "(s0)\n";
+            // 计算元素偏移：索引*4
+            fout << "\tslli\tt3," << rv::toString(rs2) << ",2\n";
+            // 计算最终偏移量：基地址偏移量 + 索引*4
+            fout << "\tadd\tt3,t4,t3\n";
+            // 加上sp得到最终地址
+            fout << "\tadd\tt3,s0,t3\n";
+        }
+        else
+        {
+            // 全局数组处理
+            fout << "\tla\t" << rv::toString(rv::rvREG::X5) << "," << instr->op1.name << "\n";
+            fout << "\tslli\tt3," << rv::toString(rs2) << ",2\n";
+            fout << "\tadd\tt3," << rv::toString(rv::rvREG::X5) << ",t3\n";
+        }
+
+        // 存储值到计算出的地址
+        fout << "\tsw\t" << rv::toString(rd) << ",0(t3)\n";
     }
     else
     {
-        // 全局数组处理
-        fout << "\tla\t" << rv::toString(rv::rvREG::X5) << "," << instr->op1.name << "\n";
-        fout << "\tslli\tt3," << rv::toString(rs2) << ",2\n";
-        fout << "\tadd\tt3," << rv::toString(rv::rvREG::X5) << ",t3\n";
-    }
+        rv::rvFREG frd;
+        rv::rvREG rs2;
+        frd = fgetRd(instr->des, true);
+        rs2 = getRs2(instr->op2);
+        int array_var_offset = varMap.find_operand(instr->op1);
 
-    // 存储值到计算出的地址
-    fout << "\tsw\t" << rv::toString(rd) << ",0(t3)\n";
+        fout << "\tlw\tt4," << array_var_offset << "(s0)\n";
+        fout << "\tslli\tt3," << rv::toString(rs2) << ",2\n";
+        fout << "\tadd\tt3,t4,t3\n";
+        fout << "\tadd\tt3,s0,t3\n";
+        fout << "\tfsw\t" << rv::toString(frd) << ",0(t3)\n";
+    }
+}
+
+void backend::Generator::FDefSolve(ir::Instruction *&instr)
+{
+
+    int des_offset = varMap.find_operand(instr->des);
+    varMap.add_operand(instr->des);
+    des_offset = varMap.find_operand(instr->des);
+
+    rv::rvFREG frs1 = fgetRs1(instr->op1);
+    fout << "\tfsw\t" << rv::toString(frs1) << "," << des_offset << "(s0)\n";
 }
 
 void backend::Generator::DefSolve(ir::Instruction *&instr)
@@ -982,7 +1204,7 @@ void backend::Generator::GotoSolve(ir::Instruction *&instr)
     // 计算跳转目标的标签（基于当前指令的相对偏移）
     int relative_offset = std::stoi(instr->des.name);
 
-    if (instr->op1.type == ir::Type::null)
+    if (instr->op1.type == ir::Type::null || instr->op1.type == ir::Type::FloatLiteral)
     {
         // 无条件跳转
         fout << "\tj\t." << current_func_name << "_" << (Instr_ID + relative_offset - 1) << "\n";
@@ -995,4 +1217,260 @@ void backend::Generator::GotoSolve(ir::Instruction *&instr)
         // 当条件不为0时跳转
         fout << "\tbnez\t" << rv::toString(rs1) << ",." << current_func_name << "_" << (Instr_ID + relative_offset - 1) << "\n";
     }
+}
+
+void backend::Generator::FAddSolve(ir::Instruction *&instr)
+{
+    rv::rvFREG frd, frs1, frs2;
+    frd = fgetRd(instr->des);
+    frs1 = fgetRs1(instr->op1);
+    frs2 = fgetRs2(instr->op2);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    if (des_offset == -1)
+    {
+        // 检查是否为全局变量
+        if (global_vars.find(instr->des.name) != global_vars.end())
+        {
+            // 是全局变量，生成存储到全局变量的代码
+            fout << "\tfadd.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+            fout << "\tla\ts3," << instr->des.name << "\n";
+            fout << "\tfsw\t" << rv::toString(frd) << ",0(s3)\n";
+            return;
+        }
+        else
+        {
+            // 是局部变量，添加到变量表
+            varMap.add_operand(instr->des);
+            des_offset = varMap.find_operand(instr->des);
+        }
+    }
+
+    fout << "\tfadd.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+    fout << "\tfsw\t" << rv::toString(frd) << "," << des_offset << "(s0)\n";
+}
+
+void backend::Generator::FSubSolve(ir::Instruction *&instr)
+{
+    rv::rvFREG frd, frs1, frs2;
+    frd = fgetRd(instr->des);
+    frs1 = fgetRs1(instr->op1);
+    frs2 = fgetRs2(instr->op2);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    if (des_offset == -1)
+    {
+        // 检查是否为全局变量
+        if (global_vars.find(instr->des.name) != global_vars.end())
+        {
+            // 是全局变量，生成存储到全局变量的代码
+            fout << "\tfsub.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+            fout << "\tla\ts3," << instr->des.name << "\n";
+            fout << "\tfsw\t" << rv::toString(frd) << ",0(s3)\n";
+            return;
+        }
+        else
+        {
+            // 是局部变量，添加到变量表
+            varMap.add_operand(instr->des);
+            des_offset = varMap.find_operand(instr->des);
+        }
+    }
+
+    fout << "\tfsub.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+    fout << "\tfsw\t" << rv::toString(frd) << "," << des_offset << "(s0)\n";
+}
+
+void backend::Generator::FMulSolve(ir::Instruction *&instr)
+{
+    rv::rvFREG frd, frs1, frs2;
+    frd = fgetRd(instr->des);
+    frs1 = fgetRs1(instr->op1);
+    frs2 = fgetRs2(instr->op2);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    if (des_offset == -1)
+    {
+        // 检查是否为全局变量
+        if (global_vars.find(instr->des.name) != global_vars.end())
+        {
+            // 是全局变量，生成存储到全局变量的代码
+            fout << "\tfmul.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+            fout << "\tla\ts3," << instr->des.name << "\n";
+            fout << "\tfsw\t" << rv::toString(frd) << ",0(s3)\n";
+            return;
+        }
+        else
+        {
+            // 是局部变量，添加到变量表
+            varMap.add_operand(instr->des);
+            des_offset = varMap.find_operand(instr->des);
+        }
+    }
+
+    fout << "\tfmul.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+    fout << "\tfsw\t" << rv::toString(frd) << "," << des_offset << "(s0)\n";
+}
+
+void backend::Generator::FDivSolve(ir::Instruction *&instr)
+{
+    rv::rvFREG frd, frs1, frs2;
+    frd = fgetRd(instr->des);
+    frs1 = fgetRs1(instr->op1);
+    frs2 = fgetRs2(instr->op2);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    if (des_offset == -1)
+    {
+        // 检查是否为全局变量
+        if (global_vars.find(instr->des.name) != global_vars.end())
+        {
+            // 是全局变量，生成存储到全局变量的代码
+            fout << "\tfdiv.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+            fout << "\tla\ts3," << instr->des.name << "\n";
+            fout << "\tfsw\t" << rv::toString(frd) << ",0(s3)\n";
+            return;
+        }
+        else
+        {
+            // 是局部变量，添加到变量表
+            varMap.add_operand(instr->des);
+            des_offset = varMap.find_operand(instr->des);
+        }
+    }
+
+    fout << "\tfdiv.s\t" << rv::toString(frd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+    fout << "\tfsw\t" << rv::toString(frd) << "," << des_offset << "(s0)\n";
+}
+
+void backend::Generator::FMovSolve(ir::Instruction *&instr)
+{
+    rv::rvFREG frs1;
+    frs1 = fgetRs1(instr->op1);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    // 如果目标变量不在变量表中，将其添加到变量表
+    if (des_offset == -1)
+    {
+        // 检查是否为全局变量
+        if (global_vars.find(instr->des.name) != global_vars.end())
+        {
+            // 是全局变量，生成存储到全局变量的代码
+            fout << "\tla\ts3," << instr->des.name << "\n";
+            fout << "\tfsw\t" << rv::toString(frs1) << ",0(s3)\n";
+            return;
+        }
+        else
+        {
+            // 是局部变量，添加到变量表
+            varMap.add_operand(instr->des);
+            des_offset = varMap.find_operand(instr->des);
+        }
+    }
+
+    // 存储结果到内存
+    fout << "\tfsw\t" << rv::toString(frs1) << "," << des_offset << "(s0)\n";
+}
+
+void backend::Generator::CvtI2FSolve(ir::Instruction *&instr)
+{
+    rv::rvREG rs1;
+    rs1 = getRs1(instr->op1);
+    rv::rvFREG frd = fgetRd(instr->des);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    if (des_offset == -1)
+    {
+        // 检查是否为全局变量
+        if (global_vars.find(instr->des.name) != global_vars.end())
+        {
+            // 是全局变量，生成存储到全局变量的代码
+            fout << "\tfcvt.s.w\t" << rv::toString(frd) << "," << rv::toString(rs1) << "\n";
+            fout << "\tla\ts3," << instr->des.name << "\n";
+            fout << "\tfsw\t" << rv::toString(frd) << ",0(s3)\n";
+            return;
+        }
+        else
+        {
+            // 是局部变量，添加到变量表
+            varMap.add_operand(instr->des);
+            des_offset = varMap.find_operand(instr->des);
+        }
+    }
+    fout << "\tfrcsr\tt5\n";
+    fout << "\tfsrmi\t2\n";
+    fout << "\tfcvt.s.w\t" << rv::toString(frd) << "," << rv::toString(rs1) << "\n";
+    fout << "\tfscsr\tt5\n";
+    fout << "\tfsw\t" << rv::toString(frd) << "," << des_offset << "(s0)\n";
+}
+
+void backend::Generator::CvtF2ISolve(ir::Instruction *&instr)
+{
+    rv::rvFREG frs1;
+    frs1 = fgetRs1(instr->op1);
+    rv::rvREG rd = getRd(instr->des);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    if (des_offset == -1)
+    {
+        // 检查是否为全局变量
+        if (global_vars.find(instr->des.name) != global_vars.end())
+        {
+            // 是全局变量，生成存储到全局变量的代码
+            fout << "\tfcvt.w.s\t" << rv::toString(rd) << "," << rv::toString(frs1) << "\n";
+            fout << "\tla\ts3," << instr->des.name << "\n";
+            fout << "\tsw\t" << rv::toString(rd) << ",0(s3)\n";
+            return;
+        }
+        else
+        {
+            // 是局部变量，添加到变量表
+            varMap.add_operand(instr->des);
+            des_offset = varMap.find_operand(instr->des);
+        }
+    }
+    fout << "\tfrcsr\tt5\n";
+    fout << "\tfsrmi\t2\n";
+    fout << "\tfcvt.w.s\t" << rv::toString(rd) << "," << rv::toString(frs1) << "\n";
+    fout << "\tfscsr\tt5\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
+}
+
+void backend::Generator::FLssSolve(ir::Instruction *&instr)
+{
+    rv::rvREG rd = getRd(instr->des);
+    rv::rvFREG frs1, frs2;
+    frs1 = fgetRs1(instr->op1);
+    frs2 = fgetRs2(instr->op2);
+
+    int des_offset = varMap.find_operand(instr->des);
+
+    // if (des_offset == -1)
+    // {
+    //     // 检查是否为全局变量
+    //     if (global_vars.find(instr->des.name) != global_vars.end())
+    //     {
+    //         // 是全局变量，生成存储到全局变量的代码
+    //         fout << "\tflt.s\t" << rv::toString(rd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+    //         fout << "\tla\ts3," << instr->des.name << "\n";
+    //         fout << "\tsw\t" << rv::toString(rd) << ",0(s3)\n";
+    //         return;
+    //     }
+    //     else
+    //     {
+    //         // 是局部变量，添加到变量表
+    //         varMap.add_operand(instr->des);
+    //         des_offset = varMap.find_operand(instr->des);
+    //     }
+    // }
+
+    fout << "\tflt.s\t" << rv::toString(rd) << "," << rv::toString(frs1) << "," << rv::toString(frs2) << "\n";
+    fout << "\tsw\t" << rv::toString(rd) << "," << des_offset << "(s0)\n";
 }

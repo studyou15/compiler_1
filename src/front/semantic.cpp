@@ -555,7 +555,10 @@ void frontend::Analyzer::analysisEqExp(EqExp *root, vector<ir::Instruction *> &b
         GET_CHILD_PTR(pt, Term, i - 1);
         if (p1->v[0] >= '0' && p1->v[0] <= '9')
         {
-            p1->t = Type::IntLiteral;
+            if(p1->v.size() >=2 && p1->v[1] == '.')
+                p1->t = Type::FloatLiteral;
+            else
+                p1->t = Type::IntLiteral;
         }
         if (pt->token.type == TokenType::EQL)
             buffer.push_back(new Instruction({p1->v, p1->t}, {root->v, root->t}, {root->v, root->t}, Operator::eq));
@@ -698,7 +701,7 @@ void frontend::Analyzer::analysisAddExp(AddExp *root, vector<ir::Instruction *> 
         {
             float temp = stof(const_n) + stof(ans);
             std::ostringstream oss;
-            oss<<std::fixed<<std::setprecision(9)<<temp;
+            oss<<std::fixed<<std::setprecision(7)<<temp;
             ans = oss.str();
         }
 
@@ -811,9 +814,9 @@ void frontend::Analyzer::analysisMulExp(MulExp *root, vector<ir::Instruction *> 
 
         if(const_n != "X")
         {
-            float temp = stof(const_n) + stof(ans);
+            float temp = stof(const_n) * stof(ans);
             std::ostringstream oss;
-            oss<<std::fixed<<std::setprecision(9)<<temp;
+            oss<<std::fixed<<std::setprecision(7)<<temp;
             ans = oss.str();
         }
 
